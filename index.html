@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Flow</title>
+  <style>
+    :root {
+      --sl-color-primary-50: #fff7ed;
+      --sl-color-primary-100: #ffedd5;
+      --sl-color-primary-200: #fed7aa;
+      --sl-color-primary-300: #fdba74;
+      --sl-color-primary-400: #fb923c;
+      --sl-color-primary-500: #f97316;
+      --sl-color-primary-600: #ea580c;
+      --sl-color-primary-700: #c2410c;
+      --sl-color-primary-800: #9a3412;
+      --sl-color-primary-900: #7c2d12;
+      --sl-color-primary-950: #431407;
+
+      --sl-color-warning-50: #fefce8;
+      --sl-color-warning-100: #fef9c3;
+      --sl-color-warning-200: #fef08a;
+      --sl-color-warning-300: #fde047;
+      --sl-color-warning-400: #facc15;
+      --sl-color-warning-500: #eab308;
+      --sl-color-warning-600: #ca8a04;
+      --sl-color-warning-700: #a16207;
+      --sl-color-warning-800: #854d0e;
+      --sl-color-warning-900: #713f12;
+      --sl-color-warning-950: #422006;
+
+      --sl-color-danger-50: #fef2f2;
+      --sl-color-danger-100: #fee2e2;
+      --sl-color-danger-200: #fecaca;
+      --sl-color-danger-300: #fca5a5;
+      --sl-color-danger-400: #f87171;
+      --sl-color-danger-500: #ef4444;
+      --sl-color-danger-600: #dc2626;
+      --sl-color-danger-700: #b91c1c;
+      --sl-color-danger-800: #991b1b;
+      --sl-color-danger-900: #7f1d1d;
+      --sl-color-danger-950: #450a0a;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background-color: var(--sl-color-neutral-0);
+      color: var(--sl-color-neutral-900);
+      min-height: 100vh;
+    }
+
+    .app-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Fallback loading spinner */
+    .loading-fallback {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #f97316;
+      border-radius: 50%;
+      width: 2rem;
+      height: 2rem;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-loading">
+      <div class="loading-fallback"></div>
+      <p>Loading Task Flow...</p>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+
