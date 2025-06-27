@@ -2,6 +2,12 @@
 // Import CSS themes via JS file to avoid TypeScript issues
 import './shoelace-css.js';
 
+// Set up icon library path for Shoelace
+import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
+
+// Set the base path to the CDN for icons
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.1/cdn/');
+
 // Import all commonly used Shoelace components
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import '@shoelace-style/shoelace/dist/components/icon/icon.js';
@@ -24,9 +30,8 @@ import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/tag/tag.js';
 
-// Set base path for icons
-import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
-setBasePath('/node_modules/@shoelace-style/shoelace/dist/');
+// Set base path for icons - use CDN for better reliability
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.1/cdn/');
 
 // Export for convenience
 export * from '@shoelace-style/shoelace/dist/components/button/button.js';
