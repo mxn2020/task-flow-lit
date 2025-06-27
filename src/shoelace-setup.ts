@@ -1,6 +1,6 @@
 // src/shoelace-setup.ts
-import '@shoelace-style/shoelace/dist/themes/light.css';
-import '@shoelace-style/shoelace/dist/themes/dark.css';
+// Import CSS themes via JS file to avoid TypeScript issues
+import './shoelace-css.js';
 
 // Import all commonly used Shoelace components
 import '@shoelace-style/shoelace/dist/components/button/button.js';
