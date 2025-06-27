@@ -13,11 +13,17 @@ export class AuthService extends BaseService {
   }
 
   async signOut() {
-    return this.handleRequest(() => supabase.signOut());
+    return this.handleRequest(() => 
+      supabase.signOut().then(result => ({ data: null, error: result.error }))
+    );
   }
 
   async resetPassword(email: string) {
     return this.handleRequest(() => supabase.resetPassword(email));
+  }
+
+  async resendConfirmation(email: string) {
+    return this.handleRequest(() => supabase.resendConfirmation(email));
   }
 
   async updatePassword(password: string) {

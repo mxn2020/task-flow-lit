@@ -21,7 +21,22 @@ export class DataSettingsPage extends BasePage {
   static styles = css`
     ${BasePage.styles}
     
-    /* Data settings page specific styles */
+    /* Da    try {
+      const result = await this.loadingController.withLoading('add-type', () =>
+        this.typeService.createType({
+          account_id: this.currentAccount!.id,
+          name: this.formData.types.name.trim(),
+          color: this.formData.types.color,
+        })
+      );
+
+      if (data && !error) {
+        this.types = [...this.types, data];
+        this.formData = { ...this.formData, types: { name: '', color: '#f59e0b' } };
+        this.showNotification('success', 'Type created successfully');
+      } else {
+        throw new Error(result?.error || 'Failed to create type');
+      } specific styles */
     .page-title {
       font-size: 1.5rem;
       font-weight: var(--sl-font-weight-semibold);
@@ -769,19 +784,19 @@ export class DataSettingsPage extends BasePage {
     if (!this.formData.groups.name.trim() || !this.currentAccount?.id) return;
 
     try {
-      const { data, error } = await this.loadingController.withLoading('add-group', () =>
+      const result = await this.loadingController.withLoading('add-group', () =>
         this.groupService.createGroup({
           account_id: this.currentAccount!.id,
           name: this.formData.groups.name.trim(),
         })
       );
 
-      if (data && !error) {
-        this.groups = [...this.groups, data];
+      if (result?.data && !result?.error) {
+        this.groups = [...this.groups, result.data];
         this.formData = { ...this.formData, groups: { name: '' } };
         this.showNotification('success', 'Group created successfully');
       } else {
-        throw new Error(error || 'Failed to create group');
+        throw new Error(result?.error || 'Failed to create group');
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create group');
@@ -792,7 +807,7 @@ export class DataSettingsPage extends BasePage {
     if (!this.formData.labels.name.trim() || !this.currentAccount?.id) return;
 
     try {
-      const { data, error } = await this.loadingController.withLoading('add-label', () =>
+      const result = await this.loadingController.withLoading('add-label', () =>
         this.labelService.createLabel({
           account_id: this.currentAccount!.id,
           name: this.formData.labels.name.trim(),
@@ -800,12 +815,12 @@ export class DataSettingsPage extends BasePage {
         })
       );
 
-      if (data && !error) {
-        this.labels = [...this.labels, data];
+      if (result?.data && !result?.error) {
+        this.labels = [...this.labels, result.data];
         this.formData = { ...this.formData, labels: { name: '', color: '#3b82f6' } };
         this.showNotification('success', 'Label created successfully');
       } else {
-        throw new Error(error || 'Failed to create label');
+        throw new Error(result?.error || 'Failed to create label');
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create label');
@@ -816,7 +831,7 @@ export class DataSettingsPage extends BasePage {
     if (!this.formData.categories.name.trim() || !this.currentAccount?.id) return;
 
     try {
-      const { data, error } = await this.loadingController.withLoading('add-category', () =>
+      const result = await this.loadingController.withLoading('add-category', () =>
         this.categoryService.createCategory({
           account_id: this.currentAccount!.id,
           name: this.formData.categories.name.trim(),
@@ -824,12 +839,12 @@ export class DataSettingsPage extends BasePage {
         })
       );
 
-      if (data && !error) {
-        this.categories = [...this.categories, data];
+      if (result?.data && !result?.error) {
+        this.categories = [...this.categories, result.data];
         this.formData = { ...this.formData, categories: { name: '', color: '#10b981' } };
         this.showNotification('success', 'Category created successfully');
       } else {
-        throw new Error(error || 'Failed to create category');
+        throw new Error(result?.error || 'Failed to create category');
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create category');
@@ -840,7 +855,7 @@ export class DataSettingsPage extends BasePage {
     if (!this.formData.types.name.trim() || !this.currentAccount?.id) return;
 
     try {
-      const { data, error } = await this.loadingController.withLoading('add-type', () =>
+      const result = await this.loadingController.withLoading('add-type', () =>
         this.typeService.createType({
           account_id: this.currentAccount!.id,
           name: this.formData.types.name.trim(),
@@ -848,12 +863,12 @@ export class DataSettingsPage extends BasePage {
         })
       );
 
-      if (data && !error) {
-        this.types = [...this.types, data];
+      if (result?.data && !result?.error) {
+        this.types = [...this.types, result.data];
         this.formData = { ...this.formData, types: { name: '', color: '#f59e0b' } };
         this.showNotification('success', 'Type created successfully');
       } else {
-        throw new Error(error || 'Failed to create type');
+        throw new Error(result?.error || 'Failed to create type');
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create type');
@@ -896,13 +911,13 @@ export class DataSettingsPage extends BasePage {
           throw new Error(`Unknown type: ${type}`);
       }
 
-      const { error } = await this.loadingController.withLoading(`delete-${type}`, () => deletePromise);
+      const result = await this.loadingController.withLoading(`delete-${type}`, () => deletePromise);
 
-      if (!error) {
+      if (!result?.error) {
         updateArray();
         this.showNotification('success', `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
       } else {
-        throw new Error(error);
+        throw new Error(result.error);
       }
     } catch (error) {
       this.showNotification('error', `Failed to delete ${type}`);

@@ -514,7 +514,7 @@ export class ScopesPage extends LitElement {
           label="Scope Name"
           placeholder="Enter scope name"
           .value=${this.formName}
-          @sl-input=${(e: CustomEvent) => this.formName = e.target.value}
+          @sl-input=${(e: CustomEvent) => this.formName = (e.target as HTMLInputElement)?.value}
           required
         ></sl-input>
 
@@ -522,7 +522,7 @@ export class ScopesPage extends LitElement {
           label="Description"
           placeholder="Describe what this scope is for (optional)"
           .value=${this.formDescription}
-          @sl-input=${(e: CustomEvent) => this.formDescription = e.target.value}
+          @sl-input=${(e: CustomEvent) => this.formDescription = (e.target as HTMLTextAreaElement)?.value}
           rows="2"
         ></sl-textarea>
 
@@ -530,7 +530,7 @@ export class ScopesPage extends LitElement {
           <sl-select
             label="Scope Type"
             .value=${this.formType}
-            @sl-change=${(e: CustomEvent) => this.formType = e.target.value}
+            @sl-change=${(e: CustomEvent) => this.formType = (e.target as HTMLSelectElement)?.value as SystemScopeType}
             required
           >
             ${this.systemScopeTypes.map(type => html`
@@ -544,7 +544,7 @@ export class ScopesPage extends LitElement {
             label="Icon (Emoji)"
             placeholder="📝"
             .value=${this.formIcon}
-            @sl-input=${(e: CustomEvent) => this.formIcon = e.target.value}
+            @sl-input=${(e: CustomEvent) => this.formIcon = (e.target as HTMLInputElement)?.value}
             maxlength="2"
           ></sl-input>
         </div>
@@ -597,7 +597,7 @@ export class ScopesPage extends LitElement {
       const scopeData = {
         account_id: accountId,
         name: this.formName.trim(),
-        description: this.formDescription.trim() || null,
+        description: this.formDescription.trim() || undefined,
         icon: this.formIcon.trim() || selectedType?.icon || '📝',
         metadata: {
           scope_type: this.formType,

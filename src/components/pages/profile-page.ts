@@ -495,7 +495,7 @@ export class ProfilePage extends LitElement {
                 <sl-input
                   label="Full Name"
                   .value=${this.formData.name}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('name', e.target.value)}
+                  @sl-input=${(e: CustomEvent) => this.updateFormData('name', (e.target as HTMLInputElement)?.value)}
                   required
                 ></sl-input>
 
@@ -503,7 +503,7 @@ export class ProfilePage extends LitElement {
                   label="Email"
                   type="email"
                   .value=${this.formData.email}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('email', e.target.value)}
+                  @sl-input=${(e: CustomEvent) => this.updateFormData('email', (e.target as HTMLInputElement)?.value)}
                   required
                   disabled
                   help-text="Contact support to change your email"
@@ -544,7 +544,7 @@ export class ProfilePage extends LitElement {
                   label="Current Password"
                   type="password"
                   .value=${this.formData.currentPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('currentPassword', e.target.value)}
+                  @sl-input=${(e: CustomEvent) => this.updateFormData('currentPassword', (e.target as HTMLInputElement)?.value)}
                   autocomplete="current-password"
                 ></sl-input>
 
@@ -552,7 +552,7 @@ export class ProfilePage extends LitElement {
                   label="New Password"
                   type="password"
                   .value=${this.formData.newPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('newPassword', e.target.value)}
+                  @sl-input=${(e: CustomEvent) => this.updateFormData('newPassword', (e.target as HTMLInputElement)?.value)}
                   autocomplete="new-password"
                   help-text="Password must be at least 8 characters long"
                 ></sl-input>
@@ -561,7 +561,7 @@ export class ProfilePage extends LitElement {
                   label="Confirm New Password"
                   type="password"
                   .value=${this.formData.confirmPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('confirmPassword', e.target.value)}
+                  @sl-input=${(e: CustomEvent) => this.updateFormData('confirmPassword', (e.target as HTMLInputElement)?.value)}
                   autocomplete="new-password"
                 ></sl-input>
               </div>

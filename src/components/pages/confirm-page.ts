@@ -4,6 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
 import { supabase } from '../../services/supabase';
+import { AuthService } from '../../services/auth-service';
 
 interface ConfirmationState {
   status: 'loading' | 'success' | 'error';
@@ -189,6 +190,7 @@ export class ConfirmPage extends LitElement {
   @state() private showDebug = false;
 
   private redirectTimer?: number;
+  private authService = new AuthService();
 
   async connectedCallback() {
     super.connectedCallback();
@@ -500,7 +502,7 @@ export class ConfirmPage extends LitElement {
     }
 
     try {
-      const { error } = await supabase.resendConfirmation(email);
+      const { error } = await this.authService.resendConfirmation(email);
       
       if (error) {
         throw error;

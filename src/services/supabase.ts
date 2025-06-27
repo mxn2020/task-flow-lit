@@ -70,6 +70,14 @@ class SupabaseService {
     return { data, error };
   }
 
+  async resendConfirmation(email: string) {
+    const { data, error } = await this.client.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+    return { data, error };
+  }
+
   async updatePassword(password: string) {
     const { data, error } = await this.client.auth.updateUser({
       password,

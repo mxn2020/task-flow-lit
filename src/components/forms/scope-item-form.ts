@@ -12,12 +12,12 @@ interface ScopeItemFormSubmitEvent extends CustomEvent {
 
 @customElement('scope-item-form')
 export class ScopeItemForm extends BaseForm<ScopeItemFormData> {
-  static styles = [
-    BaseForm.styles,
-    css`
-      :host {
-        display: block;
-      }
+  static styles = css`
+    ${BaseForm.styles}
+    
+    :host {
+      display: block;
+    }
 
       .form-container {
         max-width: 100%;
@@ -160,8 +160,7 @@ export class ScopeItemForm extends BaseForm<ScopeItemFormData> {
         border-color: var(--sl-color-success-800);
         color: var(--sl-color-success-400);
       }
-    `
-  ];
+    `;
 
   @property() scopeType: string = 'todo';
   @property() accountId!: string;
@@ -236,8 +235,8 @@ export class ScopeItemForm extends BaseForm<ScopeItemFormData> {
         scope_id: this.scopeId,
         title: this.formData.title || '',
         notes: this.formData.notes || '',
-        priority_level: this.formData.priority_level || null,
-        due_at: this.formData.due_at || null,
+        priority_level: this.formData.priority_level || undefined,
+        due_at: this.formData.due_at || undefined,
         metadata: {
           content: this.formData.content || '',
           url: this.formData.url || '',
