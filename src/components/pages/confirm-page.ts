@@ -5,6 +5,13 @@ import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
 import { supabase } from '../../services/supabase';
 
+interface ConfirmationState {
+  status: 'loading' | 'success' | 'error';
+  message: string;
+  isNewUser: boolean;
+  debugInfo: string[];
+}
+
 @customElement('confirm-page')
 export class ConfirmPage extends LitElement {
   static styles = css`
@@ -23,28 +30,30 @@ export class ConfirmPage extends LitElement {
     }
 
     .confirm-card {
-      background: white;
-      border-radius: var(--sl-border-radius-large);
-      box-shadow: var(--sl-shadow-large);
-      padding: 2rem;
       width: 100%;
-      max-width: 400px;
-      text-align: center;
+      max-width: 500px;
     }
 
     .logo {
+      text-align: center;
       margin-bottom: 2rem;
     }
 
     .logo-text {
       font-size: 1.75rem;
-      font-weight: bold;
+      font-weight: var(--sl-font-weight-bold);
       color: var(--sl-color-primary-700);
+    }
+
+    .content-section {
+      text-align: center;
+      padding: 1rem;
     }
 
     .status-icon {
       font-size: 4rem;
       margin-bottom: 1rem;
+      display: block;
     }
 
     .status-title {
@@ -56,13 +65,14 @@ export class ConfirmPage extends LitElement {
     .status-message {
       line-height: 1.6;
       margin-bottom: 2rem;
+      color: var(--sl-color-neutral-700);
     }
 
-    .loading {
+    .loading-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: 1.5rem;
     }
 
     .success .status-icon {
@@ -71,10 +81,6 @@ export class ConfirmPage extends LitElement {
 
     .success .status-title {
       color: var(--sl-color-success-700);
-    }
-
-    .success .status-message {
-      color: var(--sl-color-neutral-600);
     }
 
     .error .status-icon {
@@ -93,27 +99,45 @@ export class ConfirmPage extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      margin-top: 1.5rem;
     }
 
-    .actions sl-button {
-      width: 100%;
-    }
-
-    .debug-info {
+    .redirect-info {
       margin-top: 1rem;
       padding: 1rem;
-      background: var(--sl-color-neutral-100);
+      background-color: var(--sl-color-neutral-100);
       border-radius: var(--sl-border-radius-medium);
-      font-size: var(--sl-font-size-small);
-      text-align: left;
-      max-height: 200px;
-      overflow-y: auto;
+      border-left: 4px solid var(--sl-color-primary-600);
     }
 
-    .debug-info pre {
-      margin: 0;
+    .redirect-countdown {
+      font-weight: var(--sl-font-weight-medium);
+      color: var(--sl-color-primary-700);
+    }
+
+    .debug-section {
+      margin-top: 2rem;
+    }
+
+    .debug-content {
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: var(--sl-font-mono);
+      font-size: var(--sl-font-size-small);
       white-space: pre-wrap;
       word-wrap: break-word;
+      text-align: left;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .actions {
+        gap: 0.75rem;
+      }
     }
 
     /* Dark theme styles */
@@ -121,21 +145,16 @@ export class ConfirmPage extends LitElement {
       background: linear-gradient(135deg, var(--sl-color-neutral-900) 0%, var(--sl-color-neutral-800) 100%);
     }
 
-    :host(.sl-theme-dark) .confirm-card {
-      background: var(--sl-color-neutral-800);
-      border: 1px solid var(--sl-color-neutral-700);
-    }
-
     :host(.sl-theme-dark) .logo-text {
       color: var(--sl-color-primary-400);
     }
 
-    :host(.sl-theme-dark) .success .status-title {
-      color: var(--sl-color-success-400);
+    :host(.sl-theme-dark) .status-message {
+      color: var(--sl-color-neutral-300);
     }
 
-    :host(.sl-theme-dark) .success .status-message {
-      color: var(--sl-color-neutral-400);
+    :host(.sl-theme-dark) .success .status-title {
+      color: var(--sl-color-success-400);
     }
 
     :host(.sl-theme-dark) .error .status-title {
@@ -146,19 +165,30 @@ export class ConfirmPage extends LitElement {
       color: var(--sl-color-danger-400);
     }
 
-    :host(.sl-theme-dark) .debug-info {
-      background: var(--sl-color-neutral-700);
-      color: var(--sl-color-neutral-300);
+    :host(.sl-theme-dark) .redirect-info {
+      background-color: var(--sl-color-neutral-800);
+      border-left-color: var(--sl-color-primary-500);
+    }
+
+    :host(.sl-theme-dark) .redirect-countdown {
+      color: var(--sl-color-primary-400);
     }
   `;
 
   @property({ type: Object }) stateController!: StateController;
   @property({ type: Object }) routerController!: RouterController;
 
-  @state() private status: 'loading' | 'success' | 'error' = 'loading';
-  @state() private message = '';
-  @state() private isNewUser = false;
-  @state() private debugInfo: string[] = [];
+  @state() private confirmationState: ConfirmationState = {
+    status: 'loading',
+    message: '',
+    isNewUser: false,
+    debugInfo: []
+  };
+
+  @state() private redirectCountdown = 3;
+  @state() private showDebug = false;
+
+  private redirectTimer?: number;
 
   async connectedCallback() {
     super.connectedCallback();
@@ -167,12 +197,35 @@ export class ConfirmPage extends LitElement {
     await this.handleEmailConfirmation();
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.redirectTimer) {
+      clearInterval(this.redirectTimer);
+    }
+  }
+
   private addDebugLog(message: string) {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage);
-    this.debugInfo = [...this.debugInfo, logMessage];
-    this.requestUpdate();
+    this.confirmationState = {
+      ...this.confirmationState,
+      debugInfo: [...this.confirmationState.debugInfo, logMessage]
+    };
+  }
+
+  private startRedirectCountdown(targetRoute: () => void) {
+    this.redirectCountdown = 3;
+    this.redirectTimer = window.setInterval(() => {
+      this.redirectCountdown--;
+      if (this.redirectCountdown <= 0) {
+        if (this.redirectTimer) {
+          clearInterval(this.redirectTimer);
+        }
+        this.addDebugLog(`🚀 Executing redirect...`);
+        targetRoute();
+      }
+    }, 1000);
   }
 
   private async handleEmailConfirmation() {
@@ -244,15 +297,19 @@ export class ConfirmPage extends LitElement {
         this.addDebugLog(`  - email_confirmed_at === created_at: ${isNewUserCheck1}`);
         this.addDebugLog(`  - created within last minute: ${isNewUserCheck2}`);
         
-        this.isNewUser = isNewUserCheck1 || isNewUserCheck2;
-        this.addDebugLog(`✅ Is new user: ${this.isNewUser}`);
+        const isNewUser = isNewUserCheck1 || isNewUserCheck2;
+        this.addDebugLog(`✅ Is new user: ${isNewUser}`);
 
-        this.status = 'success';
-        this.message = this.isNewUser 
-          ? 'Your email has been confirmed! Welcome to Task Flow.'
-          : 'Your email has been confirmed successfully.';
+        this.confirmationState = {
+          ...this.confirmationState,
+          status: 'success',
+          message: isNewUser 
+            ? 'Your email has been confirmed! Welcome to Task Flow.'
+            : 'Your email has been confirmed successfully.',
+          isNewUser
+        };
 
-        this.addDebugLog(`✅ Status set to success with message: "${this.message}"`);
+        this.addDebugLog(`✅ Status set to success with message: "${this.confirmationState.message}"`);
 
         // Clean up the URL
         const callbackUrl = callback ? decodeURIComponent(callback) : '/';
@@ -263,16 +320,13 @@ export class ConfirmPage extends LitElement {
         const { data: { session: newSession } } = await supabase.refreshSession();
         this.addDebugLog(`🔐 Current session after verification: ${newSession ? 'exists' : 'none'}`);
 
-        // Auto-redirect after a short delay
-        this.addDebugLog(`⏰ Setting up redirect in 2 seconds to: ${this.isNewUser ? 'onboarding' : 'dashboard'}`);
-        setTimeout(() => {
-          this.addDebugLog(`🚀 Executing redirect...`);
-          if (this.isNewUser) {
-            this.routerController.goToOnboarding();
-          } else {
-            this.routerController.goToDashboard();
-          }
-        }, 2000);
+        // Start redirect countdown
+        this.addDebugLog(`⏰ Starting redirect countdown...`);
+        const targetRoute = isNewUser 
+          ? () => this.routerController.goToOnboarding()
+          : () => this.routerController.goToDashboard();
+        
+        this.startRedirectCountdown(targetRoute);
 
       } else {
         this.addDebugLog('❌ No user data in response');
@@ -290,83 +344,107 @@ export class ConfirmPage extends LitElement {
       }
 
       console.error('Email confirmation error:', error);
-      this.status = 'error';
+      
+      let errorMessage = 'Email confirmation failed. Please try again.';
       
       if (error.message?.includes('Token has expired')) {
-        this.message = 'This confirmation link has expired. Please request a new confirmation email.';
+        errorMessage = 'This confirmation link has expired. Please request a new confirmation email.';
         this.addDebugLog('🕐 Token expired error detected');
       } else if (error.message?.includes('Invalid token')) {
-        this.message = 'This confirmation link is invalid or has already been used.';
+        errorMessage = 'This confirmation link is invalid or has already been used.';
         this.addDebugLog('🔑 Invalid token error detected');
       } else if (error.name === 'AuthRetryableFetchError') {
-        this.message = 'Network timeout occurred. Please check your connection and try again.';
+        errorMessage = 'Network timeout occurred. Please check your connection and try again.';
         this.addDebugLog('🌐 Network timeout error detected');
       } else {
-        this.message = error.message || 'Email confirmation failed. Please try again.';
         this.addDebugLog('❓ Generic error detected');
       }
 
-      this.addDebugLog(`📝 Final error message: "${this.message}"`);
+      this.confirmationState = {
+        ...this.confirmationState,
+        status: 'error',
+        message: errorMessage
+      };
+
+      this.addDebugLog(`📝 Final error message: "${errorMessage}"`);
     }
   }
 
   render() {
     return html`
       <div class="container">
-        <div class="confirm-card">
+        <sl-card class="confirm-card">
           <div class="logo">
             <div class="logo-text">Task Flow</div>
           </div>
 
-          ${this.renderStatus()}
+          ${this.renderContent()}
           
-          ${this.debugInfo.length > 0 ? html`
-            <div class="debug-info">
-              <strong>Debug Log:</strong>
-              <pre>${this.debugInfo.join('\n')}</pre>
+          ${this.confirmationState.debugInfo.length > 0 ? html`
+            <div class="debug-section">
+              <sl-details summary="Debug Information" ?open=${this.showDebug}>
+                <div class="debug-content">
+                  ${this.confirmationState.debugInfo.join('\n')}
+                </div>
+              </sl-details>
             </div>
           ` : ''}
-        </div>
+        </sl-card>
       </div>
     `;
   }
 
-  private renderStatus() {
-    switch (this.status) {
+  private renderContent() {
+    const { status, message, isNewUser } = this.confirmationState;
+
+    switch (status) {
       case 'loading':
         return html`
-          <div class="loading">
-            <div class="status-icon">📧</div>
-            <h1 class="status-title">Confirming your email...</h1>
-            <loading-spinner size="medium" text="Please wait"></loading-spinner>
+          <div class="content-section">
+            <div class="loading-section">
+              <div class="status-icon">📧</div>
+              <h1 class="status-title">Confirming your email...</h1>
+              <sl-spinner style="font-size: 2rem;"></sl-spinner>
+              <p class="status-message">Please wait while we verify your email address.</p>
+            </div>
           </div>
         `;
 
       case 'success':
         return html`
-          <div class="success">
+          <div class="content-section success">
             <div class="status-icon">✅</div>
             <h1 class="status-title">Email Confirmed!</h1>
-            <p class="status-message">${this.message}</p>
+            <p class="status-message">${message}</p>
+            
+            ${this.redirectTimer ? html`
+              <sl-alert variant="primary" open>
+                <sl-icon slot="icon" name="info-circle"></sl-icon>
+                <div class="redirect-countdown">
+                  Redirecting automatically in ${this.redirectCountdown} second${this.redirectCountdown !== 1 ? 's' : ''}...
+                </div>
+              </sl-alert>
+            ` : ''}
             
             <div class="actions">
-              ${this.isNewUser ? html`
-                <sl-button variant="primary" @click=${() => this.routerController.goToOnboarding()}>
+              ${isNewUser ? html`
+                <sl-button variant="primary" size="large" @click=${() => this.routerController.goToOnboarding()}>
+                  <sl-icon slot="prefix" name="rocket"></sl-icon>
                   Get Started
                 </sl-button>
-                <p style="font-size: var(--sl-font-size-small); color: var(--sl-color-neutral-600); margin: 0;">
-                  Redirecting automatically in 2 seconds...
-                </p>
+                <sl-button variant="default" @click=${() => this.routerController.goToSignIn()}>
+                  <sl-icon slot="prefix" name="box-arrow-in-right"></sl-icon>
+                  Sign In Instead
+                </sl-button>
               ` : html`
-                <sl-button variant="primary" @click=${() => this.routerController.goToDashboard()}>
+                <sl-button variant="primary" size="large" @click=${() => this.routerController.goToDashboard()}>
+                  <sl-icon slot="prefix" name="house"></sl-icon>
                   Go to Dashboard
                 </sl-button>
                 <sl-button variant="default" @click=${() => this.routerController.goToSignIn()}>
+                  <sl-icon slot="prefix" name="box-arrow-in-right"></sl-icon>
                   Sign In
                 </sl-button>
-                <p style="font-size: var(--sl-font-size-small); color: var(--sl-color-neutral-600); margin: 0;">
-                  Redirecting automatically in 2 seconds...
-                </p>
               `}
             </div>
           </div>
@@ -374,19 +452,32 @@ export class ConfirmPage extends LitElement {
 
       case 'error':
         return html`
-          <div class="error">
+          <div class="content-section error">
             <div class="status-icon">❌</div>
             <h1 class="status-title">Confirmation Failed</h1>
-            <p class="status-message">${this.message}</p>
+            <p class="status-message">${message}</p>
+            
+            <sl-alert variant="danger" open>
+              <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+              <strong>What you can do:</strong>
+              <ul style="margin: 0.5rem 0 0 1rem; padding: 0;">
+                <li>Check if you have a newer confirmation email</li>
+                <li>Request a new confirmation email</li>
+                <li>Contact support if the problem persists</li>
+              </ul>
+            </sl-alert>
             
             <div class="actions">
               <sl-button variant="primary" @click=${this.handleResendConfirmation}>
+                <sl-icon slot="prefix" name="envelope"></sl-icon>
                 Resend Confirmation Email
               </sl-button>
               <sl-button variant="default" @click=${() => this.routerController.goToSignIn()}>
+                <sl-icon slot="prefix" name="arrow-left"></sl-icon>
                 Back to Sign In
               </sl-button>
               <sl-button variant="default" @click=${() => this.routerController.goToSignUp()}>
+                <sl-icon slot="prefix" name="person-plus"></sl-icon>
                 Create New Account
               </sl-button>
             </div>
@@ -400,9 +491,58 @@ export class ConfirmPage extends LitElement {
 
   private async handleResendConfirmation() {
     this.addDebugLog('🔄 Resend confirmation requested');
-    // In a real app, you'd prompt for email and resend confirmation
-    // For now, redirect to sign up
-    this.routerController.goToSignUp();
+    
+    // Show a dialog to get the email address
+    const email = prompt('Please enter your email address to resend the confirmation:');
+    
+    if (!email) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.resendConfirmation(email);
+      
+      if (error) {
+        throw error;
+      }
+
+      // Show success message
+      const alert = document.createElement('sl-alert');
+      alert.variant = 'success';
+      alert.closable = true;
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="check-circle"></sl-icon>
+        <strong>Confirmation email sent!</strong> Please check your inbox and spam folder.
+      `;
+      
+      document.body.appendChild(alert);
+      alert.show();
+      
+      // Remove after 5 seconds
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+
+    } catch (error: any) {
+      console.error('Failed to resend confirmation:', error);
+      
+      // Show error message
+      const alert = document.createElement('sl-alert');
+      alert.variant = 'danger';
+      alert.closable = true;
+      alert.innerHTML = `
+        <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+        <strong>Failed to send confirmation email.</strong> ${error.message || 'Please try again later.'}
+      `;
+      
+      document.body.appendChild(alert);
+      alert.show();
+      
+      // Remove after 5 seconds
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
   }
 }
 

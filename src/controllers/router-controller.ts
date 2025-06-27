@@ -36,7 +36,7 @@ export class RouterController implements ReactiveController {
     { path: '/app/:teamSlug/team', component: 'team-page', requiresAuth: true, title: 'Team Settings' },
     { path: '/app/:teamSlug/team/members', component: 'team-members-page', requiresAuth: true, title: 'Team Members' },
     { path: '/app/:teamSlug/billing', component: 'billing-page', requiresAuth: true, title: 'Billing' },
-    { path: '/app/:teamSlug/documentation', component: 'documentation-page', requiresAuth: true, title: 'Documentation' },
+    { path: '/docs', component: 'documentation-page', requiresAuth: false, title: 'Documentation' },
     
     // 404
     { path: '*', component: 'not-found-page', title: 'Page Not Found' },

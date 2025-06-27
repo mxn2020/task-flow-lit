@@ -4,7 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
 import { ThemeController } from '../../controllers/theme-controller';
-import { Account, Scope } from '../../types';
+import { Scope } from '../../types';
 import { supabase } from '../../services/supabase';
 import '../common/skeleton-loader';
 
@@ -12,13 +12,13 @@ import '../common/skeleton-loader';
 export class AppSidebar extends LitElement {
   static styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
       height: 100vh;
       width: 16rem;
       background-color: var(--sl-color-neutral-50);
       border-right: 1px solid var(--sl-color-neutral-200);
-      display: flex;
-      flex-direction: column;
+      flex-shrink: 0;
     }
 
     .sidebar-header {
@@ -31,10 +31,6 @@ export class AppSidebar extends LitElement {
       margin-bottom: 0.75rem;
     }
 
-    .create-team-btn {
-      width: 100%;
-    }
-
     .sidebar-nav {
       flex: 1;
       padding: 1rem 0;
@@ -42,50 +38,53 @@ export class AppSidebar extends LitElement {
     }
 
     .nav-section {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .nav-section-title {
-      padding: 0 1rem;
-      font-size: var(--sl-font-size-small);
+      padding: 0 1rem 0.5rem;
+      font-size: var(--sl-font-size-x-small);
       font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-600);
+      color: var(--sl-color-neutral-500);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
+      letter-spacing: 0.07em;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      padding: 0.5rem 1rem;
+      gap: 0.75rem;
+      padding: 0.6rem 1rem;
+      margin: 0 0.5rem;
       color: var(--sl-color-neutral-700);
       text-decoration: none;
-      transition: background-color 0.2s;
+      transition: all 0.2s;
       cursor: pointer;
+      border-radius: var(--sl-border-radius-medium);
+      font-weight: var(--sl-font-weight-medium);
     }
 
     .nav-item:hover {
-      background-color: var(--sl-color-neutral-100);
+      background-color: var(--sl-color-neutral-200);
+      color: var(--sl-color-neutral-900);
     }
 
     .nav-item.active {
-      background-color: var(--sl-color-primary-100);
-      color: var(--sl-color-primary-700);
-      border-right: 3px solid var(--sl-color-primary-600);
+      background-color: var(--sl-color-primary-600);
+      color: var(--sl-color-neutral-0);
     }
 
     .nav-item-icon {
-      margin-right: 0.75rem;
-      font-size: 1.25rem;
-    }
-
-    .nav-item-text {
-      flex: 1;
+      font-size: 1.1rem;
     }
 
     .scope-item {
-      padding-left: 2.5rem;
+      padding-left: 1.5rem; /* Indent scope items */
+      font-weight: var(--sl-font-weight-normal);
+    }
+    
+    .scope-item .nav-item-icon {
+        font-size: 1rem;
     }
 
     .sidebar-footer {
@@ -93,100 +92,56 @@ export class AppSidebar extends LitElement {
       border-top: 1px solid var(--sl-color-neutral-200);
     }
 
-    .user-menu {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+    .user-menu-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border-radius: var(--sl-border-radius-medium);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .user-menu-trigger:hover {
+        background-color: var(--sl-color-neutral-100);
     }
 
     .user-avatar {
-      width: 2rem;
-      height: 2rem;
-      border-radius: 50%;
-      background-color: var(--sl-color-primary-600);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: var(--sl-font-weight-semibold);
-      font-size: var(--sl-font-size-small);
+      flex-shrink: 0;
     }
 
     .user-info {
       flex: 1;
       min-width: 0;
+      text-align: left;
     }
 
     .user-name {
-      font-weight: var(--sl-font-weight-medium);
+      font-weight: var(--sl-font-weight-semibold);
       color: var(--sl-color-neutral-900);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .user-email {
       font-size: var(--sl-font-size-small);
       color: var(--sl-color-neutral-600);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Mobile styles */
-    @media (max-width: 768px) {
-      :host {
-        position: fixed;
-        left: 0;
-        top: 0;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-
-      :host(.open) {
-        transform: translateX(0);
-      }
     }
 
     /* Dark theme styles */
     :host(.sl-theme-dark) {
-      background-color: var(--sl-color-neutral-900);
+      background-color: var(--sl-color-neutral-800);
       border-right-color: var(--sl-color-neutral-700);
     }
-
-    :host(.sl-theme-dark) .sidebar-header {
-      border-bottom-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .nav-section-title {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .nav-item {
-      color: var(--sl-color-neutral-300);
-    }
-
-    :host(.sl-theme-dark) .nav-item:hover {
-      background-color: var(--sl-color-neutral-800);
-    }
-
-    :host(.sl-theme-dark) .nav-item.active {
-      background-color: var(--sl-color-primary-900);
-      color: var(--sl-color-primary-300);
-    }
-
+    :host(.sl-theme-dark) .sidebar-header,
     :host(.sl-theme-dark) .sidebar-footer {
-      border-top-color: var(--sl-color-neutral-700);
+      border-color: var(--sl-color-neutral-700);
     }
-
-    :host(.sl-theme-dark) .user-name {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .user-email {
-      color: var(--sl-color-neutral-400);
-    }
+    :host(.sl-theme-dark) .nav-section-title { color: var(--sl-color-neutral-500); }
+    :host(.sl-theme-dark) .nav-item { color: var(--sl-color-neutral-300); }
+    :host(.sl-theme-dark) .nav-item:hover { background-color: var(--sl-color-neutral-700); color: var(--sl-color-neutral-0); }
+    :host(.sl-theme-dark) .nav-item.active { background-color: var(--sl-color-primary-600); color: var(--sl-color-neutral-0); }
+    :host(.sl-theme-dark) .user-menu-trigger:hover { background-color: var(--sl-color-neutral-700); }
+    :host(.sl-theme-dark) .user-name { color: var(--sl-color-neutral-100); }
+    :host(.sl-theme-dark) .user-email { color: var(--sl-color-neutral-400); }
   `;
 
   @property({ type: Object }) stateController!: StateController;
@@ -195,203 +150,173 @@ export class AppSidebar extends LitElement {
   @property() currentTeamSlug?: string;
 
   @state() private scopes: Scope[] = [];
-  @state() private scopesLoading = false;
+  @state() private scopesLoading = true;
   @state() private showCreateTeamDialog = false;
 
-  async connectedCallback() {
+  connectedCallback() {
     super.connectedCallback();
-    await this.loadScopes();
+    this.loadScopes();
   }
 
   updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('currentTeamSlug')) {
+    if (changedProperties.has('currentTeamSlug') && this.currentTeamSlug) {
       this.loadScopes();
     }
   }
 
   private async loadScopes() {
-    if (!this.stateController.state.currentAccount?.id) return;
-
+    if (!this.currentAccount?.id) return;
+    this.scopesLoading = true;
     try {
-      this.scopesLoading = true;
-      const { data, error } = await supabase.getScopes(this.stateController.state.currentAccount.id);
-      
+      const { data, error } = await supabase.getScopes(this.currentAccount.id);
       if (error) throw error;
-      this.scopes = data || [];
+      this.scopes = data?.filter(s => s.show_in_sidebar) || [];
     } catch (error) {
-      console.error('Failed to load scopes:', error);
+      console.error('Failed to load sidebar scopes:', error);
+      this.scopes = [];
     } finally {
       this.scopesLoading = false;
     }
   }
 
+  private get currentAccount() {
+    return this.stateController.state.currentAccount;
+  }
+  
+  private get accounts() {
+    return this.stateController.state.accounts;
+  }
+
+  private get user() {
+    return this.stateController.state.user;
+  }
+
   render() {
-    const { user, currentAccount, accounts } = this.stateController.state;
-    const currentPath = this.routerController.currentRoute;
+    const currentPath = this.routerController.currentRoute ?? '';
+    const teamSlug = this.currentTeamSlug;
+
+    if (!teamSlug) return html``; // Don't render if there's no team context
 
     return html`
       <div class="sidebar-header">
-        <sl-select 
+        <sl-select
           class="team-selector"
           placeholder="Select team"
-          value=${currentAccount?.slug || ''}
+          .value=${this.currentAccount?.slug || ''}
           @sl-change=${this.handleTeamChange}
+          ?disabled=${this.accounts.length <= 1}
         >
-          ${accounts.map(account => html`
-            <sl-option value=${account.slug}>${account.name}</sl-option>
+          ${this.accounts.map(account => html`
+            <sl-option value=${account.slug}>
+              <sl-icon slot="prefix" name="people-fill"></sl-icon>
+              ${account.name}
+            </sl-option>
           `)}
         </sl-select>
-        
-        <sl-button 
-          class="create-team-btn"
-          variant="default" 
-          size="small"
-          @click=${this.handleCreateTeam}
-        >
-          <sl-icon slot="prefix" name="plus"></sl-icon>
-          Create Team
-        </sl-button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          
-          <div 
-            class="nav-item ${this.isActive(`/app/${this.currentTeamSlug}`, currentPath) ? 'active' : ''}"
-            @click=${() => this.navigate(`/app/${this.currentTeamSlug}`)}
-          >
-            <span class="nav-item-icon">🏠</span>
-            <span class="nav-item-text">Dashboard</span>
-          </div>
-
-          <div 
-            class="nav-item ${this.isActive(`/app/${this.currentTeamSlug}/scopes`, currentPath) ? 'active' : ''}"
-            @click=${() => this.navigate(`/app/${this.currentTeamSlug}/scopes`)}
-          >
-            <span class="nav-item-icon">📋</span>
-            <span class="nav-item-text">All Scopes</span>
-          </div>
-
-          <div 
-            class="nav-item ${this.isActive(`/app/${this.currentTeamSlug}/data-settings`, currentPath) ? 'active' : ''}"
-            @click=${() => this.navigate(`/app/${this.currentTeamSlug}/data-settings`)}
-          >
-            <span class="nav-item-icon">⚙️</span>
-            <span class="nav-item-text">Data Settings</span>
-          </div>
+          <a class="nav-item ${this.isActive(`/app/${teamSlug}`, currentPath, true) ? 'active' : ''}" href="/app/${teamSlug}">
+            <sl-icon class="nav-item-icon" name="house-door"></sl-icon>
+            Dashboard
+          </a>
         </div>
 
         <div class="nav-section">
           <div class="nav-section-title">Scopes</div>
-          
-          ${this.scopesLoading ? html`
-            <skeleton-loader type="text" count="3"></skeleton-loader>
-          ` : ''}
-
+          <a class="nav-item ${this.isActive(`/app/${teamSlug}/scopes`, currentPath) && !this.isScopeItemRoute(currentPath) ? 'active' : ''}" href="/app/${teamSlug}/scopes">
+            <sl-icon class="nav-item-icon" name="collection"></sl-icon>
+            All Scopes
+          </a>
+          ${this.scopesLoading ? html`<skeleton-loader type="text" count="3"></skeleton-loader>` : ''}
           ${this.scopes.map(scope => html`
-            <div 
-              class="nav-item scope-item ${this.isActive(`/app/${this.currentTeamSlug}/scopes/${scope.id}`, currentPath) ? 'active' : ''}"
-              @click=${() => this.navigate(`/app/${this.currentTeamSlug}/scopes/${scope.id}`)}
-            >
+            <a class="nav-item scope-item ${this.isActive(`/app/${teamSlug}/scopes/${scope.id}`, currentPath) ? 'active' : ''}" href="/app/${teamSlug}/scopes/${scope.id}">
               <span class="nav-item-icon">${scope.icon || '📝'}</span>
-              <span class="nav-item-text">${scope.name}</span>
-            </div>
+              ${scope.name}
+            </a>
           `)}
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Manage</div>
+          <a class="nav-item ${this.isActive(`/app/${teamSlug}/team/members`, currentPath) ? 'active' : ''}" href="/app/${teamSlug}/team/members">
+            <sl-icon class="nav-item-icon" name="people"></sl-icon>
+            Team Members
+          </a>
+          <a class="nav-item ${this.isActive(`/app/${teamSlug}/billing`, currentPath) ? 'active' : ''}" href="/app/${teamSlug}/billing">
+            <sl-icon class="nav-item-icon" name="credit-card"></sl-icon>
+            Billing
+          </a>
+           <a class="nav-item ${this.isActive(`/app/${teamSlug}/team`, currentPath, true) ? 'active' : ''}" href="/app/${teamSlug}/team">
+            <sl-icon class="nav-item-icon" name="gear"></sl-icon>
+            Team Settings
+          </a>
         </div>
       </nav>
 
       <div class="sidebar-footer">
-        <sl-dropdown>
-          <div class="user-menu" slot="trigger">
-            <div class="user-avatar">
-              ${user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
+        <sl-dropdown distance="10">
+          <div class="user-menu-trigger" slot="trigger">
+            <sl-avatar 
+                initial=${this.user?.name?.charAt(0) || this.user?.email?.charAt(0)} 
+                label="User avatar"
+                class="user-avatar"
+            ></sl-avatar>
             <div class="user-info">
-              <div class="user-name">${user?.name || 'User'}</div>
-              <div class="user-email">${user?.email}</div>
+              <div class="user-name">${this.user?.name || 'User'}</div>
+              <div class="user-email">${this.user?.email}</div>
             </div>
+            <sl-icon name="three-dots-vertical"></sl-icon>
           </div>
 
           <sl-menu>
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}`)}>
-              <sl-icon slot="prefix" name="house"></sl-icon>
-              Dashboard
+            <sl-menu-item @click=${() => this.routerController.navigate(`/app/${teamSlug}/profile`)}>
+              <sl-icon slot="prefix" name="person-circle"></sl-icon>Profile
             </sl-menu-item>
-            
+            <sl-menu-item @click=${() => this.themeController.toggleTheme()}>
+                <sl-icon slot="prefix" name=${this.themeController.theme === 'dark' ? 'sun' : 'moon-stars'}></sl-icon>
+                Switch to ${this.themeController.theme === 'dark' ? 'Light' : 'Dark'} Mode
+            </sl-menu-item>
             <sl-divider></sl-divider>
-            
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}/profile`)}>
-              <sl-icon slot="prefix" name="person"></sl-icon>
-              Profile
+            <sl-menu-item @click=${this.handleCreateTeam}>
+                <sl-icon slot="prefix" name="plus-circle"></sl-icon>Create New Team
             </sl-menu-item>
-            
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}/team`)}>
-              <sl-icon slot="prefix" name="people"></sl-icon>
-              Team Settings
-            </sl-menu-item>
-            
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}/team/members`)}>
-              <sl-icon slot="prefix" name="person-plus"></sl-icon>
-              Team Members
-            </sl-menu-item>
-            
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}/billing`)}>
-              <sl-icon slot="prefix" name="credit-card"></sl-icon>
-              Billing
-            </sl-menu-item>
-            
             <sl-divider></sl-divider>
-            
-            <sl-menu-item @click=${() => this.navigate(`/app/${this.currentTeamSlug}/documentation`)}>
-              <sl-icon slot="prefix" name="book"></sl-icon>
-              Documentation
-            </sl-menu-item>
-            
-            <sl-divider></sl-divider>
-            
             <sl-menu-item @click=${this.handleSignOut}>
-              <sl-icon slot="prefix" name="box-arrow-right"></sl-icon>
-              Sign Out
+              <sl-icon slot="prefix" name="box-arrow-right"></sl-icon>Sign Out
             </sl-menu-item>
           </sl-menu>
         </sl-dropdown>
       </div>
 
-      <!-- Create Team Dialog -->
       <sl-dialog label="Create New Team" ?open=${this.showCreateTeamDialog} @sl-request-close=${() => this.showCreateTeamDialog = false}>
-        <team-create-form 
-          .stateController=${this.stateController}
-          @team-created=${this.handleTeamCreated}
-          @cancel=${() => this.showCreateTeamDialog = false}
-        ></team-create-form>
+        Create team form will go here.
+        <sl-button slot="footer" @click=${() => this.showCreateTeamDialog = false}>Close</sl-button>
       </sl-dialog>
     `;
   }
-
-  private isActive(targetPath: string, currentPath: string): boolean {
-    return currentPath === targetPath || currentPath.startsWith(targetPath + '/');
+  
+  private isActive(targetPath: string, currentPath: string, exact = false): boolean {
+    if (exact) {
+      return currentPath === targetPath;
+    }
+    return currentPath.startsWith(targetPath);
+  }
+  
+  private isScopeItemRoute(path: string): boolean {
+    return /^\/app\/[^\/]+\/scopes\/[^\/]+/.test(path);
   }
 
-  private navigate(path: string) {
-    this.routerController.navigate(path);
-  }
-
-  private handleTeamChange(event: CustomEvent) {
-    const teamSlug = event.detail.item.value;
-    if (teamSlug) {
-      this.routerController.goToTeam(teamSlug);
+  private handleTeamChange(e: CustomEvent) {
+    const newTeamSlug = (e.target as any).value;
+    if (newTeamSlug && newTeamSlug !== this.currentTeamSlug) {
+      this.routerController.goToTeam(newTeamSlug);
     }
   }
 
   private handleCreateTeam() {
     this.showCreateTeamDialog = true;
-  }
-
-  private handleTeamCreated(event: CustomEvent) {
-    const team = event.detail.team;
-    this.showCreateTeamDialog = false;
-    this.routerController.goToTeam(team.slug);
   }
 
   private async handleSignOut() {

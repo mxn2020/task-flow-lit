@@ -78,7 +78,7 @@ export class AppRoot extends LitElement {
       position: fixed;
       top: 10px;
       right: 10px;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.3);
       color: white;
       border-radius: 4px;
       font-size: 12px;
@@ -86,6 +86,7 @@ export class AppRoot extends LitElement {
       z-index: 9999;
       font-family: monospace;
       transition: all 0.3s ease;
+      backdrop-filter: blur(8px);
     }
 
     .debug-header {
