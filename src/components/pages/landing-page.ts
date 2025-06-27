@@ -1,3 +1,4 @@
+// src/components/pages/landing-page.ts
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
 

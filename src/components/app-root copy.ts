@@ -1,12 +1,11 @@
-// src/components/app-root.ts - Minimal changes, keep your original StateController
+// src/components/app-root.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { StateController } from '../controllers/state-controller'; // Keep your original!
+import { StateController } from '../controllers/state-controller';
 import { RouterController } from '../controllers/router-controller';
 import { ThemeController } from '../controllers/theme-controller';
-import { LoadingController } from '../controllers/loading-controller'; // Add this only
 
-// Import page components (keep all your existing imports)
+// Import page components
 import './pages/landing-page';
 import './pages/sign-in-page';
 import './pages/sign-up-page';
@@ -30,12 +29,10 @@ import './pages/not-found-page';
 import './common/loading-spinner';
 import './common/error-message';
 import './common/skeleton-loader';
-// import './common/error-boundary'; // Add this when you create it
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
   static styles = css`
-    /* Keep all your existing styles */
     :host {
       display: block;
       min-height: 100vh;
@@ -73,7 +70,6 @@ export class AppRoot extends LitElement {
       flex-direction: column;
     }
 
-    /* Keep all your existing debug styles */
     .debug-info {
       position: fixed;
       top: 10px;
@@ -150,61 +146,62 @@ export class AppRoot extends LitElement {
     }
   `;
 
-  // Keep your original controllers - don't change these!
   private stateController = new StateController(this);
   private routerController = new RouterController(this);
   private themeController = new ThemeController(this);
   
-  // Add LoadingController only as a supplement
-  private loadingController = new LoadingController(this);
-  
-  // Keep all your existing state
   @state() private debugLogs: string[] = [];
   @state() private renderCount = 0;
   @state() private debugCollapsed = false;
-  private lastAccountSwitchRoute: string = '';
-  private lastAccountsLength = 0;
-  private pendingAccountSwitch = false;
-  private accountSwitchInProgress = false;
+  private lastAccountSwitchRoute: string = ''; // Track last route for account switching
+  private lastAccountsLength = 0; // Track when accounts are loaded
+  private pendingAccountSwitch = false; // Track if we need to retry account switching
+  private accountSwitchInProgress = false; // Track if account switch is currently happening
 
   connectedCallback() {
     super.connectedCallback();
     this.addDebugLog('🔌 AppRoot connected');
     this.addDebugLog(`📍 Initial route: ${window.location.pathname}`);
     
-    // Keep your existing setup
+    // Add global error handlers for unhandled errors
     this.setupGlobalErrorHandlers();
+    
+    // Expose recovery methods globally for debugging
     this.exposeRecoveryMethods();
   }
 
   private setupGlobalErrorHandlers() {
-    // Keep your existing implementation but add error boundary support
+    // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
       console.error('[AppRoot] Unhandled promise rejection:', event.reason);
       
+      // Check if it's a session/auth related error
       const error = event.reason;
       if (error?.message?.includes('JWT') || 
           error?.message?.includes('session') || 
           error?.message?.includes('unauthorized')) {
         console.log('[AppRoot] Auth error detected in unhandled rejection, triggering recovery...');
         this.handleAuthError();
-        event.preventDefault();
+        event.preventDefault(); // Prevent the error from being logged to console
       }
     });
 
+    // Handle general JavaScript errors
     window.addEventListener('error', (event) => {
       console.error('[AppRoot] Unhandled JavaScript error:', event.error);
+      
+      // Log to our debug system
       this.addDebugLog(`💥 Error: ${event.error?.message || 'Unknown error'}`);
     });
 
-    // Keep your existing periodic check
+    // Periodically check for state corruption
     setInterval(() => {
       if (this.stateController.isStateCorrupted()) {
         console.warn('[AppRoot] Periodic state corruption check failed, triggering recovery...');
         this.addDebugLog('⚠️ State corruption detected, recovering...');
         this.handleStateCorruption();
       }
-    }, 30000);
+    }, 30000); // Check every 30 seconds
   }
 
   private async handleAuthError() {
@@ -240,12 +237,12 @@ export class AppRoot extends LitElement {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
     const logMessage = `[${timestamp}] ${message}`;
     console.log(`[AppRoot] ${logMessage}`);
-    this.debugLogs = [...this.debugLogs.slice(-15), logMessage];
+    this.debugLogs = [...this.debugLogs.slice(-15), logMessage]; // Keep last 15 logs
     this.requestUpdate();
   }
 
   private exposeRecoveryMethods() {
-    // Keep your existing implementation
+    // Make recovery methods available globally for debugging
     (window as any).taskFlowRecovery = {
       forceFullRecovery: () => this.stateController.forceFullRecovery(),
       refreshData: () => this.stateController.refreshData(),
@@ -275,6 +272,14 @@ export class AppRoot extends LitElement {
           theme: localStorage.getItem('task-flow-theme'),
           lastRoute: localStorage.getItem('last-route')
         });
+        console.log('Session Storage:', {
+          keys: Object.keys(sessionStorage)
+        });
+        console.log('🔧 To fix issues, try:');
+        console.log('- taskFlowRecovery.forceFullRecovery()');
+        console.log('- taskFlowRecovery.refreshData()');
+        console.log('- taskFlowRecovery.forceReload()');
+        console.log('- taskFlowRecovery.goToMainDashboard()');
         return {
           url: window.location.href,
           state: this.stateController.state,
@@ -285,10 +290,11 @@ export class AppRoot extends LitElement {
     };
     
     console.log('[AppRoot] 🛠️ Recovery methods exposed globally as window.taskFlowRecovery');
+    console.log('[AppRoot] Available methods:', Object.keys((window as any).taskFlowRecovery));
+    console.log('[AppRoot] 🔍 Run taskFlowRecovery.diagnose() to see current state');
   }
 
   render() {
-    // Keep your ENTIRE existing render method - don't change the logic!
     this.renderCount++;
     this.addDebugLog(`🎨 Render #${this.renderCount}`);
     
@@ -300,12 +306,13 @@ export class AppRoot extends LitElement {
     this.addDebugLog(`📊 State - loading: ${loading}, error: ${!!error}, auth: ${isAuthenticated}, user: ${!!user}`);
     this.addDebugLog(`🧭 Route - current: ${currentRoute}, component: ${currentComponent}, requiresAuth: ${requiresAuth}`);
 
-    // Keep your existing account tracking logic
+    // Track accounts length for better loading logic
     if (accounts.length > 0 && this.lastAccountsLength === 0) {
       this.lastAccountsLength = accounts.length;
-      this.pendingAccountSwitch = false;
+      this.pendingAccountSwitch = false; // Reset pending state when accounts are first loaded
     }
 
+    // Check if accounts were just loaded and we need to retry account switching
     if (accounts.length > this.lastAccountsLength && this.pendingAccountSwitch) {
       this.addDebugLog(`📈 Accounts loaded (${accounts.length}), retrying pending account switch...`);
       this.pendingAccountSwitch = false;
@@ -315,7 +322,7 @@ export class AppRoot extends LitElement {
     }
     this.lastAccountsLength = accounts.length;
 
-    // Keep ALL your existing render logic - just wrap in error boundary
+    // Show loading spinner during initial load
     if (loading && !this.stateController.state.user) {
       this.addDebugLog('⏳ Showing initial loading spinner');
       return html`
@@ -327,6 +334,7 @@ export class AppRoot extends LitElement {
       `;
     }
 
+    // Show global error
     if (error) {
       this.addDebugLog(`❌ Showing global error: ${error}`);
       return html`
@@ -340,9 +348,12 @@ export class AppRoot extends LitElement {
       `;
     }
 
-    // Keep ALL your existing auth and account switching logic
+    // Handle auth redirects
     if (requiresAuth && !isAuthenticated) {
       this.addDebugLog(`🔐 Auth required but not authenticated - redirecting to sign in`);
+      this.addDebugLog(`📍 Current route: ${currentRoute}`);
+      
+      // Use setTimeout to avoid blocking the current render cycle
       setTimeout(() => {
         this.addDebugLog(`🚀 Executing redirect to sign in`);
         this.routerController.goToSignIn();
@@ -359,6 +370,9 @@ export class AppRoot extends LitElement {
 
     if (!requiresAuth && isAuthenticated && this.shouldRedirectToDashboard()) {
       this.addDebugLog(`🏠 Authenticated user on public route - redirecting to dashboard`);
+      this.addDebugLog(`📍 Current route: ${currentRoute}`);
+      
+      // Use setTimeout to avoid blocking the current render cycle
       setTimeout(() => {
         this.addDebugLog(`🚀 Executing redirect to dashboard`);
         this.routerController.goToDashboard();
@@ -373,12 +387,15 @@ export class AppRoot extends LitElement {
       `;
     }
 
-    // Keep ALL your existing account switching logic
+    // Handle account switching for authenticated users before rendering the page
     if (isAuthenticated && user) {
       const context = this.routerController.context;
       const teamSlug = context.params?.teamSlug;
       
+      // Check if we need account switching for the current route
       if (teamSlug && this.needsAccountSwitching(currentComponent)) {
+        // If accounts aren't loaded yet AND we've never had accounts, show loading
+        // This prevents showing loading when accounts are temporarily empty during revalidation
         const neverHadAccounts = this.lastAccountsLength === 0 && accounts.length === 0;
         const shouldShowAccountLoading = (loading || neverHadAccounts) && !this.pendingAccountSwitch;
         
@@ -394,10 +411,12 @@ export class AppRoot extends LitElement {
           `;
         }
         
+        // Check if this is a new route that needs account switching
         const routeChanged = this.lastAccountSwitchRoute !== currentRoute;
         this.addDebugLog(`🔍 Route changed: ${routeChanged} (last: ${this.lastAccountSwitchRoute}, current: ${currentRoute})`);
         
         if (routeChanged && !this.accountSwitchInProgress) {
+          // Check if we need to switch to the correct account
           const currentAccount = this.stateController.state.currentAccount;
           this.addDebugLog(`🔍 Current account: ${currentAccount?.slug || 'none'} (id: ${currentAccount?.id || 'none'})`);
           this.addDebugLog(`🎯 Target team: ${teamSlug}`);
@@ -408,10 +427,12 @@ export class AppRoot extends LitElement {
           this.addDebugLog(`✅ Is correct account: ${isCorrectAccount}`);
           
           if (!isCorrectAccount) {
+            // Need to switch accounts
             this.lastAccountSwitchRoute = currentRoute;
             this.accountSwitchInProgress = true;
             this.addDebugLog(`🔄 Starting account switch for team: ${teamSlug}`);
             
+            // Perform account switching asynchronously
             this.handleAccountSwitchingForRoute().then((success) => {
               this.accountSwitchInProgress = false;
               if (success) {
@@ -419,14 +440,15 @@ export class AppRoot extends LitElement {
               } else {
                 this.addDebugLog(`❌ Account switch failed for team: ${teamSlug}`);
               }
-              this.requestUpdate();
+              this.requestUpdate(); // Trigger re-render
             }).catch((error) => {
               this.accountSwitchInProgress = false;
               console.error('[AppRoot] Account switching promise error:', error);
               this.addDebugLog(`💥 Account switch promise error: ${error.message}`);
-              this.requestUpdate();
+              this.requestUpdate(); // Trigger re-render to show error
             });
             
+            // Show loading while account switching is in progress
             this.addDebugLog(`⏳ Account switching in progress for team: ${teamSlug}`);
             return html`
               <div class="loading-container">
@@ -436,10 +458,12 @@ export class AppRoot extends LitElement {
               ${this.renderDebugInfo()}
             `;
           } else {
+            // Already on correct account, just update the tracking
             this.addDebugLog(`✅ Already on correct account for team: ${teamSlug}`);
             this.lastAccountSwitchRoute = currentRoute;
           }
         } else if (this.accountSwitchInProgress) {
+          // Still switching accounts, show loading
           this.addDebugLog(`⏳ Account switching still in progress for team: ${teamSlug}`);
           return html`
             <div class="loading-container">
@@ -450,6 +474,7 @@ export class AppRoot extends LitElement {
           `;
         }
       } else if (!teamSlug && currentComponent === 'dashboard-page') {
+        // For personal dashboard, ensure we're on personal account
         if (this.lastAccountSwitchRoute !== currentRoute) {
           this.lastAccountSwitchRoute = currentRoute;
           setTimeout(async () => {
@@ -475,7 +500,6 @@ export class AppRoot extends LitElement {
     `;
   }
 
-  // Keep ALL your existing methods exactly as they are
   private renderDebugInfo() {
     return html`
       <div class="debug-info ${this.debugCollapsed ? 'minimized' : ''}">
@@ -514,7 +538,6 @@ export class AppRoot extends LitElement {
   }
 
   private renderPage(component: string) {
-    // Keep your ENTIRE existing renderPage method
     const context = this.routerController.context;
 
     this.addDebugLog(`🔧 Rendering component: ${component}`);
@@ -633,7 +656,6 @@ export class AppRoot extends LitElement {
     }
   }
 
-  // Keep your existing handleAccountSwitchingForRoute method exactly as it is
   private async handleAccountSwitchingForRoute() {
     const context = this.routerController.context;
     const teamSlug = context.params?.teamSlug;
@@ -641,6 +663,7 @@ export class AppRoot extends LitElement {
     
     this.addDebugLog(`🔄 Executing account switch for route: ${this.routerController.currentRoute}`);
     
+    // Handle team-related routes
     if (teamSlug && this.needsAccountSwitching(currentComponent)) {
       this.addDebugLog(`🔄 Ensuring correct account for team route: ${teamSlug}`);
       
@@ -658,17 +681,18 @@ export class AppRoot extends LitElement {
         return false;
       }
     } else if (!teamSlug && currentComponent === 'dashboard-page') {
+      // For personal dashboard, ensure we're on personal account
       this.addDebugLog(`🏠 Ensuring personal account for dashboard`);
       try {
         const success = await this.stateController.ensureCorrectAccountForRoute();
-        return success !== false;
+        return success !== false; // ensureCorrectAccountForRoute returns boolean or undefined
       } catch (error) {
         console.error('[AppRoot] Error switching to personal account:', error);
         return false;
       }
     }
     
-    return true;
+    return true; // No account switching needed
   }
 }
 

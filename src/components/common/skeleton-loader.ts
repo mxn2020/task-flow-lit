@@ -1,3 +1,4 @@
+// src/components/common/skeleton-loader.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 

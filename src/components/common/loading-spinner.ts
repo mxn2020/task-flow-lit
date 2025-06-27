@@ -1,4 +1,4 @@
-// src/components/common/loading-spinner.ts:
+// src/components/common/loading-spinner.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 

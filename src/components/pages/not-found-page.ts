@@ -1,3 +1,4 @@
+// src/components/pages/not-found-page.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { RouterController } from '../../controllers/router-controller';

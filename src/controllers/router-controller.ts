@@ -13,6 +13,8 @@ export class RouterController implements ReactiveController {
   private _currentRoute: string = '/';
   private _params: RouteParams = {};
   private _query: URLSearchParams = new URLSearchParams();
+  private _context: RouteContext | null = null; // Cache the context object
+  private debugLogs: string[] = [];
 
   private routes: Route[] = [
     // Public routes
@@ -43,17 +45,29 @@ export class RouterController implements ReactiveController {
   constructor(host: ReactiveControllerHost) {
     this.host = host;
     host.addController(this);
+    this.addDebugLog('🚀 RouterController created');
+  }
+
+  private addDebugLog(message: string) {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(`[RouterController] ${logMessage}`);
+    this.debugLogs = [...this.debugLogs.slice(-10), logMessage]; // Keep last 10 logs
   }
 
   hostConnected() {
+    this.addDebugLog('🔌 RouterController connected');
     this.setupRouter();
   }
 
   hostDisconnected() {
+    this.addDebugLog('🔌 RouterController disconnected');
     window.removeEventListener('popstate', this.handlePopState);
+    document.removeEventListener('click', this.handleLinkClick);
   }
 
   private setupRouter() {
+    this.addDebugLog('⚙️ Setting up router');
     // Handle initial route
     this.updateRoute();
     
@@ -62,9 +76,11 @@ export class RouterController implements ReactiveController {
     
     // Intercept link clicks
     document.addEventListener('click', this.handleLinkClick);
+    this.addDebugLog('✅ Router setup complete');
   }
 
   private handlePopState = () => {
+    this.addDebugLog('⬅️ PopState event detected');
     this.updateRoute();
   };
 
@@ -75,14 +91,24 @@ export class RouterController implements ReactiveController {
     if (!link) return;
     
     // Skip external links
-    if (link.hostname !== window.location.hostname) return;
+    if (link.hostname !== window.location.hostname) {
+      this.addDebugLog(`🔗 Skipping external link: ${link.href}`);
+      return;
+    }
     
     // Skip links with target="_blank"
-    if (link.target === '_blank') return;
+    if (link.target === '_blank') {
+      this.addDebugLog(`🔗 Skipping blank target link: ${link.href}`);
+      return;
+    }
     
     // Skip if modifier keys are pressed
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      this.addDebugLog(`🔗 Skipping modified click: ${link.href}`);
+      return;
+    }
     
+    this.addDebugLog(`🔗 Intercepting link click: ${link.href}`);
     event.preventDefault();
     this.navigate(link.pathname + link.search + link.hash);
   };
@@ -91,33 +117,46 @@ export class RouterController implements ReactiveController {
     const path = window.location.pathname;
     const search = window.location.search;
     
+    this.addDebugLog(`📍 Updating route from ${this._currentRoute} to ${path}`);
+    
     this._currentRoute = path;
     this._query = new URLSearchParams(search);
     this._params = this.extractParams(path);
+    this._context = null; // Invalidate cached context
     
     // Update document title
     const route = this.findRoute(path);
     if (route?.title) {
       document.title = route.title;
+      this.addDebugLog(`📄 Updated document title: ${route.title}`);
     }
     
+    this.addDebugLog(`📊 Route updated - path: ${path}, component: ${route?.component}, requiresAuth: ${route?.requiresAuth}`);
     this.host.requestUpdate();
   }
 
   private findRoute(path: string): Route | undefined {
+    this.addDebugLog(`🔍 Finding route for path: ${path}`);
+    
     // Try exact match first
     const exactMatch = this.routes.find(route => route.path === path);
-    if (exactMatch) return exactMatch;
+    if (exactMatch) {
+      this.addDebugLog(`✅ Found exact match: ${exactMatch.component}`);
+      return exactMatch;
+    }
     
     // Try pattern matching
     for (const route of this.routes) {
       if (this.matchRoute(route.path, path)) {
+        this.addDebugLog(`✅ Found pattern match: ${route.component} (pattern: ${route.path})`);
         return route;
       }
     }
     
     // Return 404 route
-    return this.routes.find(route => route.path === '*');
+    const notFoundRoute = this.routes.find(route => route.path === '*');
+    this.addDebugLog(`❌ No route found, returning 404: ${notFoundRoute?.component}`);
+    return notFoundRoute;
   }
 
   private matchRoute(pattern: string, path: string): boolean {
@@ -150,27 +189,38 @@ export class RouterController implements ReactiveController {
       }
     });
     
+    this.addDebugLog(`📋 Extracted params: ${JSON.stringify(params)}`);
     return params;
   }
 
   navigate(path: string, replace: boolean = false) {
+    this.addDebugLog(`🧭 Navigate called: ${path} (replace: ${replace})`);
+    this.addDebugLog(`📍 Current location before navigate: ${window.location.pathname}`);
+    
     if (replace) {
       window.history.replaceState(null, '', path);
+      this.addDebugLog(`🔄 Replaced history state with: ${path}`);
     } else {
       window.history.pushState(null, '', path);
+      this.addDebugLog(`➕ Pushed history state with: ${path}`);
     }
+    
+    this.addDebugLog(`📍 Location after history update: ${window.location.pathname}`);
     this.updateRoute();
   }
 
   replace(path: string) {
+    this.addDebugLog(`🔄 Replace called: ${path}`);
     this.navigate(path, true);
   }
 
   back() {
+    this.addDebugLog('⬅️ Back called');
     window.history.back();
   }
 
   forward() {
+    this.addDebugLog('➡️ Forward called');
     window.history.forward();
   }
 
@@ -187,53 +237,113 @@ export class RouterController implements ReactiveController {
   }
 
   get context(): RouteContext {
-    return {
-      params: this._params,
-      query: this._query,
-    };
+    if (!this._context) {
+      this._context = {
+        params: this._params,
+        query: this._query,
+      };
+    }
+    return this._context;
   }
 
   getCurrentComponent(): string {
     const route = this.findRoute(this._currentRoute);
-    return route?.component || 'not-found-page';
+    const component = route?.component || 'not-found-page';
+    this.addDebugLog(`🎯 Getting current component: ${component} for route: ${this._currentRoute}`);
+    return component;
   }
 
   requiresAuth(): boolean {
     const route = this.findRoute(this._currentRoute);
-    return route?.requiresAuth || false;
+    const requiresAuth = route?.requiresAuth || false;
+    this.addDebugLog(`🔐 Route requires auth: ${requiresAuth} for route: ${this._currentRoute}`);
+    return requiresAuth;
   }
 
   // Helper methods for common navigation patterns
   goHome() {
+    this.addDebugLog('🏠 Going home');
     this.navigate('/');
   }
 
   goToSignIn() {
+    this.addDebugLog('🔑 Going to sign in');
     this.navigate('/auth/sign-in');
   }
 
   goToSignUp() {
+    this.addDebugLog('📝 Going to sign up');
     this.navigate('/auth/sign-up');
   }
 
   goToOnboarding() {
+    this.addDebugLog('🚀 Going to onboarding');
     this.navigate('/onboarding');
   }
 
   goToDashboard() {
+    this.addDebugLog('📊 Going to dashboard');
     this.navigate('/app');
   }
 
   goToTeam(teamSlug: string) {
+    this.addDebugLog(`👥 Going to team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}`);
   }
 
   goToScopes(teamSlug: string) {
+    this.addDebugLog(`📋 Going to scopes for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/scopes`);
   }
 
   goToScopeItems(teamSlug: string, scopeId: string) {
+    this.addDebugLog(`📝 Going to scope items for team: ${teamSlug}, scope: ${scopeId}`);
     this.navigate(`/app/${teamSlug}/scopes/${scopeId}`);
+  }
+
+  goToProfile(teamSlug: string) {
+    this.addDebugLog(`👤 Going to profile for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/profile`);
+  }
+
+  goToTeamSettings(teamSlug: string) {
+    this.addDebugLog(`⚙️ Going to team settings for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/team`);
+  }
+
+  goToTeamMembers(teamSlug: string) {
+    this.addDebugLog(`👥 Going to team members for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/team/members`);
+  }
+
+  goToBilling(teamSlug: string) {
+    this.addDebugLog(`💳 Going to billing for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/billing`);
+  }
+
+  goToDataSettings(teamSlug: string) {
+    this.addDebugLog(`📊 Going to data settings for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/data-settings`);
+  }
+
+  goToDocumentation(teamSlug: string) {
+    this.addDebugLog(`📚 Going to documentation for team: ${teamSlug}`);
+    this.navigate(`/app/${teamSlug}/documentation`);
+  }
+
+  goToResetPassword() {
+    this.addDebugLog('🔐 Going to reset password');
+    this.navigate('/auth/reset-password');
+  }
+
+  goToForgotPassword() {
+    this.addDebugLog('❓ Going to forgot password');
+    this.navigate('/auth/forgot-password');
+  }
+
+  goToConfirm() {
+    this.addDebugLog('✅ Going to email confirmation');
+    this.navigate('/auth/confirm');
   }
 }
 

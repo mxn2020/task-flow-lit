@@ -1,3 +1,4 @@
+// src/components/pages/confirm-page.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
@@ -98,6 +99,23 @@ export class ConfirmPage extends LitElement {
       width: 100%;
     }
 
+    .debug-info {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--sl-color-neutral-100);
+      border-radius: var(--sl-border-radius-medium);
+      font-size: var(--sl-font-size-small);
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .debug-info pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
     /* Dark theme styles */
     :host(.sl-theme-dark) {
       background: linear-gradient(135deg, var(--sl-color-neutral-900) 0%, var(--sl-color-neutral-800) 100%);
@@ -127,6 +145,11 @@ export class ConfirmPage extends LitElement {
     :host(.sl-theme-dark) .error .status-message {
       color: var(--sl-color-danger-400);
     }
+
+    :host(.sl-theme-dark) .debug-info {
+      background: var(--sl-color-neutral-700);
+      color: var(--sl-color-neutral-300);
+    }
   `;
 
   @property({ type: Object }) stateController!: StateController;
@@ -135,180 +158,155 @@ export class ConfirmPage extends LitElement {
   @state() private status: 'loading' | 'success' | 'error' = 'loading';
   @state() private message = '';
   @state() private isNewUser = false;
+  @state() private debugInfo: string[] = [];
 
   async connectedCallback() {
     super.connectedCallback();
-    
-    // First check if user is already authenticated
-    await this.checkCurrentSession();
-    
-    // If not already handled, try the email confirmation
-    if (this.status === 'loading') {
-      await this.handleEmailConfirmation();
-    }
+    this.addDebugLog('🔌 ConfirmPage connected, starting email confirmation process');
+    this.addDebugLog(`📍 Current URL: ${window.location.href}`);
+    await this.handleEmailConfirmation();
   }
 
-  private async checkCurrentSession() {
-    try {
-      console.log('🔍 Checking current session...');
-      const { data: { session }, error } = await supabase.supabaseClient.auth.getSession();
-      
-      console.log('📱 Current session check:', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userEmail: session?.user?.email,
-        emailConfirmed: session?.user?.email_confirmed_at,
-        error: error ? { message: error.message } : null
-      });
-
-      if (session?.user?.email_confirmed_at) {
-        console.log('✅ User already confirmed and authenticated');
-        this.status = 'success';
-        this.message = 'Your email is already confirmed. Redirecting...';
-        
-        // Determine if new user based on recent creation
-        this.isNewUser = new Date(session.user.created_at).getTime() > Date.now() - 300000; // 5 minutes
-        
-        // Redirect immediately since they're already confirmed
-        setTimeout(() => {
-          if (this.isNewUser) {
-            this.routerController.goToOnboarding();
-          } else {
-            this.routerController.goToDashboard();
-          }
-        }, 1000);
-        
-        return;
-      }
-    } catch (error) {
-      console.log('📱 Session check failed, proceeding with token verification:', error);
-      // Continue to email confirmation flow
-    }
+  private addDebugLog(message: string) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(logMessage);
+    this.debugInfo = [...this.debugInfo, logMessage];
+    this.requestUpdate();
   }
 
   private async handleEmailConfirmation() {
     try {
+      this.addDebugLog('🚀 Starting handleEmailConfirmation');
+      
       const urlParams = new URLSearchParams(window.location.search);
       const tokenHash = urlParams.get('token_hash');
       const type = urlParams.get('type');
       const callback = urlParams.get('callback');
 
-      console.log('🔍 Email confirmation started:', {
-        tokenHash: tokenHash ? `${tokenHash.substring(0, 10)}...` : null,
-        type,
-        callback,
-        fullUrl: window.location.href
-      });
+      this.addDebugLog(`📋 URL Parameters:`);
+      this.addDebugLog(`  - token_hash: ${tokenHash ? `${tokenHash.substring(0, 10)}...` : 'null'}`);
+      this.addDebugLog(`  - type: ${type}`);
+      this.addDebugLog(`  - callback: ${callback}`);
 
       if (!tokenHash || !type) {
-        throw new Error('Invalid confirmation link - missing token_hash or type parameter');
+        this.addDebugLog('❌ Missing required parameters');
+        throw new Error('Invalid confirmation link');
       }
 
-      console.log('📝 Attempting to verify OTP with Supabase...');
-      
+      this.addDebugLog('✅ URL parameters validated, proceeding with Supabase verification');
+
+      // Check current auth state before verification
+      const { data: { session: currentSession } } = await supabase.refreshSession();
+      this.addDebugLog(`🔐 Current session before verification: ${currentSession ? 'exists' : 'none'}`);
+      if (currentSession?.user) {
+        this.addDebugLog(`👤 Current user: ${currentSession.user.email} (confirmed: ${currentSession.user.email_confirmed_at ? 'yes' : 'no'})`);
+      }
+
+      this.addDebugLog('📡 Calling supabase.verifyOtp...');
+      const startTime = Date.now();
+
       // Verify the email confirmation with Supabase
-      const { data, error } = await supabase.supabaseClient.auth.verifyOtp({
+      const { data, error } = await supabase.verifyOtp({
         token_hash: tokenHash,
         type: type as any,
       });
 
-      console.log('📧 Supabase verifyOtp response:', {
-        hasData: !!data,
-        hasUser: !!data?.user,
-        hasSession: !!data?.session,
-        userEmail: data?.user?.email,
-        userConfirmed: data?.user?.email_confirmed_at,
-        error: error ? {
-          name: error.name,
-          message: error.message,
-          status: error.status,
-          statusCode: error.status
-        } : null
-      });
+      const endTime = Date.now();
+      this.addDebugLog(`⏱️ verifyOtp completed in ${endTime - startTime}ms`);
 
       if (error) {
-        console.error('❌ Supabase verifyOtp error:', error);
+        this.addDebugLog(`❌ Supabase verifyOtp error:`);
+        this.addDebugLog(`  - Name: ${error.name}`);
+        this.addDebugLog(`  - Message: ${error.message}`);
+        this.addDebugLog(`  - Status: ${error.status || 'unknown'}`);
+        this.addDebugLog(`  - Full error: ${JSON.stringify(error, null, 2)}`);
         throw error;
       }
 
+      this.addDebugLog('✅ verifyOtp successful, analyzing response data');
+      this.addDebugLog(`📊 Response data session: ${data.session ? 'exists' : 'none'}`);
+      this.addDebugLog(`📊 Response data user: ${data.user ? 'exists' : 'none'}`);
+
       if (data.user) {
-        console.log('✅ Email verification successful:', {
-          userId: data.user.id,
-          email: data.user.email,
-          emailConfirmed: data.user.email_confirmed_at,
-          createdAt: data.user.created_at,
-          isNewUser: this.isNewUser
-        });
+        this.addDebugLog(`👤 Verified user details:`);
+        this.addDebugLog(`  - ID: ${data.user.id}`);
+        this.addDebugLog(`  - Email: ${data.user.email}`);
+        this.addDebugLog(`  - Email confirmed: ${data.user.email_confirmed_at ? 'yes' : 'no'}`);
+        this.addDebugLog(`  - Created at: ${data.user.created_at}`);
+        this.addDebugLog(`  - Email confirmed at: ${data.user.email_confirmed_at}`);
 
         // Check if this is a new user (just signed up) or existing user
-        this.isNewUser = data.user.email_confirmed_at === data.user.created_at || 
-                        new Date(data.user.created_at).getTime() > Date.now() - 300000; // Within last 5 minutes
-
-        console.log('👤 User classification:', {
-          isNewUser: this.isNewUser,
-          emailConfirmedAt: data.user.email_confirmed_at,
-          createdAt: data.user.created_at,
-          timeDiff: new Date(data.user.created_at).getTime() - Date.now()
-        });
+        const isNewUserCheck1 = data.user.email_confirmed_at === data.user.created_at;
+        const isNewUserCheck2 = new Date(data.user.created_at).getTime() > Date.now() - 60000;
+        
+        this.addDebugLog(`🔍 New user checks:`);
+        this.addDebugLog(`  - email_confirmed_at === created_at: ${isNewUserCheck1}`);
+        this.addDebugLog(`  - created within last minute: ${isNewUserCheck2}`);
+        
+        this.isNewUser = isNewUserCheck1 || isNewUserCheck2;
+        this.addDebugLog(`✅ Is new user: ${this.isNewUser}`);
 
         this.status = 'success';
         this.message = this.isNewUser 
           ? 'Your email has been confirmed! Welcome to Task Flow.'
           : 'Your email has been confirmed successfully.';
 
+        this.addDebugLog(`✅ Status set to success with message: "${this.message}"`);
+
         // Clean up the URL
         const callbackUrl = callback ? decodeURIComponent(callback) : '/';
-        console.log('🔄 Cleaning URL and preparing redirect:', { callbackUrl });
+        this.addDebugLog(`🔄 Cleaning up URL, callback: ${callbackUrl}`);
         window.history.replaceState({}, '', callbackUrl);
 
+        // Check current auth state after verification
+        const { data: { session: newSession } } = await supabase.refreshSession();
+        this.addDebugLog(`🔐 Current session after verification: ${newSession ? 'exists' : 'none'}`);
+
         // Auto-redirect after a short delay
+        this.addDebugLog(`⏰ Setting up redirect in 2 seconds to: ${this.isNewUser ? 'onboarding' : 'dashboard'}`);
         setTimeout(() => {
-          console.log('🚀 Auto-redirecting user:', { isNewUser: this.isNewUser });
+          this.addDebugLog(`🚀 Executing redirect...`);
           if (this.isNewUser) {
             this.routerController.goToOnboarding();
           } else {
             this.routerController.goToDashboard();
           }
-        }, 3000); // Increased from 2 to 3 seconds
+        }, 2000);
 
       } else {
-        console.error('❌ No user data returned from verifyOtp');
+        this.addDebugLog('❌ No user data in response');
         throw new Error('Email confirmation failed - no user data returned');
       }
 
-    } catch (error) {
-      console.error('💥 Email confirmation error:', {
-        error,
-        errorName: error?.name,
-        errorMessage: error?.message,
-        errorStatus: error?.status,
-        errorStatusCode: error?.status,
-        stack: error?.stack
-      });
-
-      this.status = 'error';
+    } catch (error: any) {
+      this.addDebugLog(`💥 Error in handleEmailConfirmation:`);
+      this.addDebugLog(`  - Error type: ${error.constructor.name}`);
+      this.addDebugLog(`  - Error message: ${error.message}`);
+      this.addDebugLog(`  - Error stack: ${error.stack}`);
       
-      // Handle specific error cases
-      if (error?.name === 'AuthRetryableFetchError') {
-        this.message = 'Connection timeout occurred. Your email may already be confirmed. Try signing in.';
-      } else if (error?.message?.includes('Token has expired')) {
-        this.message = 'This confirmation link has expired. Please request a new confirmation email.';
-      } else if (error?.message?.includes('Invalid token')) {
-        this.message = 'This confirmation link is invalid or has already been used.';
-      } else if (error?.message?.includes('timeout') || error?.message?.includes('504')) {
-        this.message = 'Server timeout occurred. Your email may already be confirmed. Try signing in.';
-      } else if (error?.status === 504) {
-        this.message = 'Gateway timeout - your email may already be confirmed. Please try signing in.';
-      } else {
-        this.message = error?.message || 'Email confirmation failed. Please try again or contact support.';
+      if (error.cause) {
+        this.addDebugLog(`  - Error cause: ${JSON.stringify(error.cause, null, 2)}`);
       }
 
-      // Log additional debugging info
-      console.log('🔧 Debug info:', {
-        currentUrl: window.location.href,
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString()
-      });
+      console.error('Email confirmation error:', error);
+      this.status = 'error';
+      
+      if (error.message?.includes('Token has expired')) {
+        this.message = 'This confirmation link has expired. Please request a new confirmation email.';
+        this.addDebugLog('🕐 Token expired error detected');
+      } else if (error.message?.includes('Invalid token')) {
+        this.message = 'This confirmation link is invalid or has already been used.';
+        this.addDebugLog('🔑 Invalid token error detected');
+      } else if (error.name === 'AuthRetryableFetchError') {
+        this.message = 'Network timeout occurred. Please check your connection and try again.';
+        this.addDebugLog('🌐 Network timeout error detected');
+      } else {
+        this.message = error.message || 'Email confirmation failed. Please try again.';
+        this.addDebugLog('❓ Generic error detected');
+      }
+
+      this.addDebugLog(`📝 Final error message: "${this.message}"`);
     }
   }
 
@@ -321,6 +319,13 @@ export class ConfirmPage extends LitElement {
           </div>
 
           ${this.renderStatus()}
+          
+          ${this.debugInfo.length > 0 ? html`
+            <div class="debug-info">
+              <strong>Debug Log:</strong>
+              <pre>${this.debugInfo.join('\n')}</pre>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -371,18 +376,15 @@ export class ConfirmPage extends LitElement {
         return html`
           <div class="error">
             <div class="status-icon">❌</div>
-            <h1 class="status-title">Confirmation Issue</h1>
+            <h1 class="status-title">Confirmation Failed</h1>
             <p class="status-message">${this.message}</p>
             
             <div class="actions">
-              <sl-button variant="primary" @click=${() => this.routerController.goToSignIn()}>
-                Try Sign In Instead
-              </sl-button>
-              <sl-button variant="default" @click=${this.handleResendConfirmation}>
+              <sl-button variant="primary" @click=${this.handleResendConfirmation}>
                 Resend Confirmation Email
               </sl-button>
-              <sl-button variant="default" @click=${this.handleManualCheck}>
-                Check if Already Confirmed
+              <sl-button variant="default" @click=${() => this.routerController.goToSignIn()}>
+                Back to Sign In
               </sl-button>
               <sl-button variant="default" @click=${() => this.routerController.goToSignUp()}>
                 Create New Account
@@ -397,20 +399,10 @@ export class ConfirmPage extends LitElement {
   }
 
   private async handleResendConfirmation() {
+    this.addDebugLog('🔄 Resend confirmation requested');
     // In a real app, you'd prompt for email and resend confirmation
     // For now, redirect to sign up
     this.routerController.goToSignUp();
-  }
-
-  private async handleManualCheck() {
-    console.log('🔄 Manual confirmation check requested');
-    this.status = 'loading';
-    await this.checkCurrentSession();
-    
-    // If still loading after session check, that means we need to try the original flow
-    if (this.status === 'loading') {
-      await this.handleEmailConfirmation();
-    }
   }
 }
 

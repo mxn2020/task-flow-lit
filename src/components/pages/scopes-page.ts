@@ -1,3 +1,4 @@
+// src/components/pages/scopes-page.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
@@ -7,6 +8,7 @@ import { RouteContext, Scope } from '../../types';
 import { SystemScopeType } from '../../types';
 import { supabase } from '../../services/supabase';
 import '../layout/app-sidebar';
+import '../common/skeleton-loader';
 
 @customElement('scopes-page')
 export class ScopesPage extends LitElement {

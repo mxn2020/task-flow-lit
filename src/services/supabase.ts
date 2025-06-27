@@ -9,11 +9,22 @@ class SupabaseService {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+    console.log('[Supabase] Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'missing'
+    });
+
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing Supabase environment variables');
+      console.error('[Supabase] Missing environment variables');
+      console.error('Please create a .env file with:');
+      console.error('VITE_SUPABASE_URL=your_supabase_project_url');
+      console.error('VITE_SUPABASE_ANON_KEY=your_supabase_anon_key');
+      throw new Error('Missing Supabase environment variables. Please check your .env file.');
     }
 
     this.client = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('[Supabase] Client initialized successfully');
   }
 
   static getInstance(): SupabaseService {
@@ -66,46 +77,128 @@ class SupabaseService {
     return { data, error };
   }
 
-  getUser(): User | null {
-    return this.client.auth.getUser().then(({ data }) => data.user);
+  async getUser(): Promise<User | null> {
+    const { data } = await this.client.auth.getUser();
+    return data.user;
   }
 
-  getSession(): Session | null {
-    return this.client.auth.getSession().then(({ data }) => data.session);
+  async getSession(): Promise<Session | null> {
+    const { data } = await this.client.auth.getSession();
+    return data.session;
   }
 
   onAuthStateChange(callback: (event: string, session: Session | null) => void) {
-    return this.client.auth.onAuthStateChange(callback);
+    return this.client.auth.onAuthStateChange((event, session) => {
+      callback(event, session);
+    });
+  }
+
+  async refreshSession() {
+    const { data, error } = await this.client.auth.refreshSession();
+    return { data, error };
+  }
+
+  async verifyOtp(params: { token_hash: string; type: any }) {
+    const { data, error } = await this.client.auth.verifyOtp(params);
+    return { data, error };
   }
 
   // Account methods
   async getCurrentUserAccounts(): Promise<{ data: Account[] | null; error: any }> {
-    const { data, error } = await this.client
-      .from('user_accounts')
-      .select('*');
-    return { data, error };
+    console.log('[Supabase] getCurrentUserAccounts called');
+    try {
+      const { data, error } = await this.client
+        .from('user_accounts')
+        .select(`
+          id,
+          name,
+          picture_url,
+          slug,
+          role
+        `);
+      
+      console.log('[Supabase] getCurrentUserAccounts result:', { 
+        dataLength: data?.length || 0, 
+        error: error,
+        rawData: data 
+      });
+      
+      // Add account_type for consistency
+      if (data) {
+        data.forEach((account: any) => {
+          account.account_type = 'team'; // These are team accounts from user_accounts view
+        });
+      }
+      
+      return { data: data as any, error };
+    } catch (error) {
+      console.error('[Supabase] getCurrentUserAccounts exception:', error);
+      return { data: null, error };
+    }
   }
 
   async getCurrentUserWorkspace(): Promise<{ data: any; error: any }> {
-    const { data, error } = await this.client
-      .from('user_account_workspace')
-      .select('*')
-      .single();
-    return { data, error };
+    console.log('[Supabase] getCurrentUserWorkspace called');
+    try {
+      const { data, error } = await this.client
+        .from('user_account_workspace')
+        .select(`
+          id,
+          name,
+          picture_url,
+          subscription_status
+        `)
+        .single();
+      
+      console.log('[Supabase] getCurrentUserWorkspace result:', { 
+        hasData: !!data, 
+        error: error,
+        rawData: data 
+      });
+      
+      // Add account_type and slug for consistency with team accounts
+      if (data) {
+        (data as any).account_type = 'personal';
+        (data as any).slug = 'personal'; // Personal accounts use 'personal' as slug
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error('[Supabase] getCurrentUserWorkspace exception:', error);
+      return { data: null, error };
+    }
   }
 
   async getTeamWorkspace(slug: string): Promise<{ data: any; error: any }> {
-    const { data, error } = await this.client
-      .rpc('team_account_workspace', { account_slug: slug })
-      .single();
-    return { data, error };
+    console.log('[Supabase] getTeamWorkspace called with slug:', slug);
+    try {
+      const { data, error } = await this.client
+        .rpc('team_account_workspace', { account_slug: slug })
+        .single();
+      
+      console.log('[Supabase] getTeamWorkspace result:', { 
+        hasData: !!data, 
+        error: error,
+        rawData: data 
+      });
+      
+      // Add account_type for consistency
+      if (data) {
+        (data as any).account_type = 'team';
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error('[Supabase] getTeamWorkspace exception:', error);
+      return { data: null, error };
+    }
   }
 
   async createTeamAccount(name: string): Promise<{ data: Account | null; error: any }> {
     const { data, error } = await this.client
       .rpc('create_team_account', { account_name: name })
       .single();
-    return { data, error };
+    return { data: data as Account, error };
   }
 
   async updateAccount(id: string, updates: Partial<Account>): Promise<{ data: Account | null; error: any }> {
@@ -124,9 +217,8 @@ class SupabaseService {
       .from('scopes')
       .select('*')
       .eq('account_id', accountId)
-      .is('deleted_at', null)
-      .order('position', { ascending: true });
-    return { data, error };
+      .order('created_at', { ascending: false });
+    return { data: data as Scope[], error };
   }
 
   async createScope(scope: Partial<Scope>): Promise<{ data: Scope | null; error: any }> {
@@ -148,12 +240,12 @@ class SupabaseService {
     return { data, error };
   }
 
-  async deleteScope(id: string): Promise<{ error: any }> {
+  async deleteScope(id: string): Promise<{ data: null; error: any }> {
     const { error } = await this.client
       .from('scopes')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
-    return { error };
+    return { data: null, error };
   }
 
   // Scope Items methods
@@ -161,16 +253,14 @@ class SupabaseService {
     let query = this.client
       .from('scope_items')
       .select('*')
-      .eq('account_id', accountId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
-
+      .eq('account_id', accountId);
+    
     if (scopeId) {
       query = query.eq('scope_id', scopeId);
     }
-
-    const { data, error } = await query;
-    return { data, error };
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    return { data: data as ScopeItem[], error };
   }
 
   async createScopeItem(item: Partial<ScopeItem>): Promise<{ data: ScopeItem | null; error: any }> {
@@ -192,12 +282,12 @@ class SupabaseService {
     return { data, error };
   }
 
-  async deleteScopeItem(id: string): Promise<{ error: any }> {
+  async deleteScopeItem(id: string): Promise<{ data: null; error: any }> {
     const { error } = await this.client
       .from('scope_items')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
-    return { error };
+    return { data: null, error };
   }
 
   // Data Settings methods
@@ -219,6 +309,24 @@ class SupabaseService {
     return { data, error };
   }
 
+  async updateGroup(id: string, updates: Partial<Group>): Promise<{ data: Group | null; error: any }> {
+    const { data, error } = await this.client
+      .from('groups')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  }
+
+  async deleteGroup(id: string): Promise<{ data: null; error: any }> {
+    const { error } = await this.client
+      .from('groups')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    return { data: null, error };
+  }
+
   async getLabels(accountId: string): Promise<{ data: Label[] | null; error: any }> {
     const { data, error } = await this.client
       .from('labels')
@@ -235,6 +343,24 @@ class SupabaseService {
       .select()
       .single();
     return { data, error };
+  }
+
+  async updateLabel(id: string, updates: Partial<Label>): Promise<{ data: Label | null; error: any }> {
+    const { data, error } = await this.client
+      .from('labels')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  }
+
+  async deleteLabel(id: string): Promise<{ data: null; error: any }> {
+    const { error } = await this.client
+      .from('labels')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    return { data: null, error };
   }
 
   async getCategories(accountId: string): Promise<{ data: Category[] | null; error: any }> {
@@ -255,22 +381,22 @@ class SupabaseService {
     return { data, error };
   }
 
-  async getTypes(accountId: string): Promise<{ data: Type[] | null; error: any }> {
+  async updateCategory(id: string, updates: Partial<Category>): Promise<{ data: Category | null; error: any }> {
     const { data, error } = await this.client
-      .from('types')
-      .select('*')
-      .eq('account_id', accountId)
-      .order('name');
-    return { data, error };
-  }
-
-  async createType(type: Partial<Type>): Promise<{ data: Type | null; error: any }> {
-    const { data, error } = await this.client
-      .from('types')
-      .insert(type)
+      .from('categories')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
     return { data, error };
+  }
+
+  async deleteCategory(id: string): Promise<{ data: null; error: any }> {
+    const { error } = await this.client
+      .from('categories')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    return { data: null, error };
   }
 
   // Onboarding methods
@@ -306,6 +432,43 @@ class SupabaseService {
       .select()
       .single();
     return { data, error };
+  }
+
+  // Type methods
+  async getTypes(accountId: string): Promise<{ data: Type[] | null; error: any }> {
+    const { data, error } = await this.client
+      .from('types')
+      .select('*')
+      .eq('account_id', accountId)
+      .order('name');
+    return { data, error };
+  }
+
+  async createType(type: Partial<Type>): Promise<{ data: Type | null; error: any }> {
+    const { data, error } = await this.client
+      .from('types')
+      .insert(type)
+      .select()
+      .single();
+    return { data, error };
+  }
+
+  async updateType(id: string, updates: Partial<Type>): Promise<{ data: Type | null; error: any }> {
+    const { data, error } = await this.client
+      .from('types')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  }
+
+  async deleteType(id: string): Promise<{ data: null; error: any }> {
+    const { error } = await this.client
+      .from('types')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    return { data: null, error };
   }
 }
 

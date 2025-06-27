@@ -1,3 +1,4 @@
+// src/components/layout/app-sidebar.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
@@ -5,6 +6,7 @@ import { RouterController } from '../../controllers/router-controller';
 import { ThemeController } from '../../controllers/theme-controller';
 import { Account, Scope } from '../../types';
 import { supabase } from '../../services/supabase';
+import '../common/skeleton-loader';
 
 @customElement('app-sidebar')
 export class AppSidebar extends LitElement {

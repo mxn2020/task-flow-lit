@@ -1,3 +1,4 @@
+// src/components/pages/sign-in-page.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
@@ -106,6 +107,22 @@ export class SignInPage extends LitElement {
       text-decoration: underline;
     }
 
+    .debug-info {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--sl-color-neutral-100);
+      border-radius: var(--sl-border-radius-medium);
+      font-size: var(--sl-font-size-small);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .debug-info pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
     /* Dark theme styles */
     :host(.sl-theme-dark) {
       background: linear-gradient(135deg, var(--sl-color-neutral-900) 0%, var(--sl-color-neutral-800) 100%);
@@ -139,6 +156,11 @@ export class SignInPage extends LitElement {
     :host(.sl-theme-dark) .divider span {
       background: var(--sl-color-neutral-800);
     }
+
+    :host(.sl-theme-dark) .debug-info {
+      background: var(--sl-color-neutral-700);
+      color: var(--sl-color-neutral-300);
+    }
   `;
 
   @property({ type: Object }) stateController!: StateController;
@@ -147,6 +169,22 @@ export class SignInPage extends LitElement {
   @state() private password = '';
   @state() private isSubmitting = false;
   @state() private error = '';
+  @state() private debugLogs: string[] = [];
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.addDebugLog('🔌 SignInPage connected');
+    this.addDebugLog(`📍 Current URL: ${window.location.href}`);
+    this.addDebugLog(`🔐 StateController provided: ${!!this.stateController}`);
+  }
+
+  private addDebugLog(message: string) {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(`[SignInPage] ${logMessage}`);
+    this.debugLogs = [...this.debugLogs.slice(-8), logMessage]; // Keep last 8 logs
+    this.requestUpdate();
+  }
 
   render() {
     return html`
@@ -173,7 +211,7 @@ export class SignInPage extends LitElement {
                 type="email"
                 placeholder="Enter your email"
                 .value=${this.email}
-                @sl-input=${(e: CustomEvent) => this.email = e.target.value}
+                @sl-input=${(e: CustomEvent) => this.email = (e.target as any).value}
                 required
                 autocomplete="email"
               ></sl-input>
@@ -185,7 +223,7 @@ export class SignInPage extends LitElement {
                 type="password"
                 placeholder="Enter your password"
                 .value=${this.password}
-                @sl-input=${(e: CustomEvent) => this.password = e.target.value}
+                @sl-input=${(e: CustomEvent) => this.password = (e.target as any).value}
                 required
                 autocomplete="current-password"
               ></sl-input>
@@ -218,6 +256,13 @@ export class SignInPage extends LitElement {
               <a href="/auth/sign-up">Sign up</a>
             </p>
           </div>
+
+          ${this.debugLogs.length > 0 ? html`
+            <div class="debug-info">
+              <strong>SignIn Debug:</strong>
+              <pre>${this.debugLogs.join('\n')}</pre>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -226,22 +271,33 @@ export class SignInPage extends LitElement {
   private async handleSubmit(event: Event) {
     event.preventDefault();
     
-    if (this.isSubmitting) return;
+    if (this.isSubmitting) {
+      this.addDebugLog('⚠️ Submit called while already submitting, ignoring');
+      return;
+    }
     
+    this.addDebugLog(`📝 Form submitted with email: ${this.email}`);
     this.isSubmitting = true;
     this.error = '';
 
     try {
+      this.addDebugLog('🔄 Calling stateController.signIn...');
       const { error } = await this.stateController.signIn(this.email, this.password);
       
       if (error) {
+        this.addDebugLog(`❌ Sign in error: ${error}`);
         this.error = error;
+      } else {
+        this.addDebugLog('✅ Sign in successful - waiting for auth state change');
+        // Success will be handled by the StateController's auth state listener
       }
-      // Success will be handled by the StateController's auth state listener
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Sign in failed';
+      const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
+      this.addDebugLog(`💥 Sign in exception: ${errorMessage}`);
+      this.error = errorMessage;
     } finally {
       this.isSubmitting = false;
+      this.addDebugLog(`🏁 Form submission complete, isSubmitting: ${this.isSubmitting}`);
     }
   }
 }
