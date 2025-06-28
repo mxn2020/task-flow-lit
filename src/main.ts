@@ -1,6 +1,6 @@
 // src/main.ts
 import './shoelace-setup'; // Import Shoelace setup first
-import './components/app-root';
+import './components/app-root'; // Use the app root
 
 // Debug logging function
 function debugLog(message: string) {
@@ -8,7 +8,7 @@ function debugLog(message: string) {
   console.log(`[Main] [${timestamp}] ${message}`);
 }
 
-debugLog('🚀 Main.ts starting');
+debugLog('🚀 Main.ts starting with app root');
 
 // Set the theme immediately to avoid flash
 const savedTheme = localStorage.getItem('task-flow-theme') || 'system';
@@ -20,7 +20,7 @@ debugLog(`🎨 Setting theme: ${savedTheme} (isDark: ${isDark})`);
 document.documentElement.classList.add(isDark ? 'sl-theme-dark' : 'sl-theme-light');
 document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
 
-// Initialize app
+// Initialize app immediately
 document.addEventListener('DOMContentLoaded', () => {
   debugLog('📄 DOM Content Loaded');
   
@@ -32,45 +32,32 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (appContainer) {
     debugLog('🔧 Replacing loading content with app-root');
-    appContainer.innerHTML = '<app-root></app-root>';
     
-    // Remove loading state immediately after app-root is added
+    // Remove the HTML loading state immediately
     if (loadingElement) {
-      debugLog('✅ Removing loading element');
+      debugLog('✅ Removing HTML loading element immediately');
       loadingElement.remove();
     }
+    
+    // Replace with the app root
+    appContainer.innerHTML = '<app-root></app-root>';
+    
+    debugLog('🎯 App root mounted successfully');
   } else {
     debugLog('❌ App container not found!');
   }
 });
 
-// Backup: Remove loading state on window load as well
+// Backup cleanup - shouldn't be needed with version
 window.addEventListener('load', () => {
-  debugLog('🌍 Window loaded');
+  debugLog('🌍 Window loaded - performing backup cleanup');
   
   const loading = document.querySelector('.app-loading');
   if (loading) {
-    debugLog('🧹 Cleaning up any remaining loading elements');
-    loading.classList.add('hidden');
-    
-    // Force remove after a short delay
-    setTimeout(() => {
-      if (loading.parentNode) {
-        loading.remove();
-        debugLog('🗑️ Force removed loading element');
-      }
-    }, 100);
+    debugLog('🧹 Backup cleanup: removing any remaining loading elements');
+    loading.remove();
   }
 });
 
-// Additional safety check - remove loading after a maximum timeout
-setTimeout(() => {
-  const loading = document.querySelector('.app-loading');
-  if (loading) {
-    debugLog('⚠️ Emergency cleanup: removing loading element after timeout');
-    loading.remove();
-  }
-}, 3000); // 3 seconds max
-
-debugLog('✅ Main.ts setup complete');
+debugLog('✅ Main.ts setup complete with router');
 

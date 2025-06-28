@@ -1,105 +1,21 @@
 // src/components/pages/profile-page.ts
-import { LitElement, html, css } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { StateController } from '../../controllers/state-controller';
-import { RouterController } from '../../controllers/router-controller';
-import { ThemeController } from '../../controllers/theme-controller';
-import { RouteContext } from '../../types';
+import { html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { BasePage } from '../base/base-page';
 import { supabase } from '../../services/supabase';
-import '../layout/app-sidebar';
 
 @customElement('profile-page')
-export class ProfilePage extends LitElement {
+export class ProfilePage extends BasePage {
   static styles = css`
-    :host {
-      display: block;
-      min-height: 100vh;
-    }
-
-    .page-layout {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: var(--sl-color-neutral-0);
-    }
-
-    .page-header {
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--sl-color-neutral-200);
-      background-color: var(--sl-color-neutral-50);
-    }
-
-    .page-title {
-      font-size: 1.5rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0 0 0.5rem 0;
-    }
-
-    .page-subtitle {
-      color: var(--sl-color-neutral-600);
-      margin: 0;
-    }
-
-    .page-content {
-      flex: 1;
-      padding: 2rem;
-    }
-
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 2rem;
-      max-width: 1000px;
-    }
-
-    .profile-sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .profile-main {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .profile-card {
-      background: white;
-      border: 1px solid var(--sl-color-neutral-200);
-      border-radius: var(--sl-border-radius-medium);
-      overflow: hidden;
-    }
-
-    .card-header {
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--sl-color-neutral-200);
-      background-color: var(--sl-color-neutral-50);
-    }
-
-    .card-title {
-      font-size: 1.125rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0;
-    }
-
-    .card-content {
-      padding: 1.5rem;
-    }
-
+    ${BasePage.styles}
+    
+    /* Profile-specific styles */
     .avatar-section {
       text-align: center;
       margin-bottom: 1.5rem;
     }
 
-    .avatar {
+    .user-avatar {
       width: 5rem;
       height: 5rem;
       border-radius: 50%;
@@ -111,6 +27,7 @@ export class ProfilePage extends LitElement {
       font-size: 1.5rem;
       font-weight: var(--sl-font-weight-semibold);
       margin-bottom: 1rem;
+      border: 3px solid var(--sl-color-primary-200);
     }
 
     .user-name {
@@ -136,6 +53,12 @@ export class ProfilePage extends LitElement {
     .meta-item {
       display: flex;
       justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--sl-color-neutral-100);
+    }
+
+    .meta-item:last-child {
+      border-bottom: none;
     }
 
     .form-section {
@@ -172,10 +95,10 @@ export class ProfilePage extends LitElement {
     }
 
     .danger-zone {
-      border: 1px solid var(--sl-color-danger-200);
+      border: 2px solid var(--sl-color-danger-300);
       border-radius: var(--sl-border-radius-medium);
       padding: 1.5rem;
-      background-color: var(--sl-color-danger-50);
+      background: linear-gradient(135deg, var(--sl-color-danger-50) 0%, var(--sl-color-danger-100) 100%);
     }
 
     .danger-title {
@@ -208,15 +131,18 @@ export class ProfilePage extends LitElement {
       border-radius: var(--sl-border-radius-medium);
       cursor: pointer;
       transition: all 0.2s;
+      background: var(--sl-color-neutral-0);
     }
 
     .theme-option:hover {
       border-color: var(--sl-color-primary-300);
+      transform: translateY(-2px);
+      box-shadow: var(--sl-shadow-medium);
     }
 
     .theme-option.active {
       border-color: var(--sl-color-primary-600);
-      background-color: var(--sl-color-primary-50);
+      background: var(--sl-color-primary-50);
     }
 
     .theme-icon {
@@ -229,70 +155,64 @@ export class ProfilePage extends LitElement {
       color: var(--sl-color-neutral-700);
     }
 
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--sl-color-primary-50);
+      border: 1px solid var(--sl-color-primary-200);
+      border-radius: var(--sl-border-radius-medium);
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: var(--sl-font-weight-bold);
+      color: var(--sl-color-primary-700);
+      display: block;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: var(--sl-font-size-small);
+      color: var(--sl-color-primary-600);
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
     /* Mobile styles */
     @media (max-width: 768px) {
-      .page-layout {
-        flex-direction: column;
-      }
-
-      .page-content {
-        padding: 1rem;
-      }
-
-      .profile-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-
       .form-grid.two-columns {
         grid-template-columns: 1fr;
       }
 
       .form-actions {
         justify-content: stretch;
-      }
-
-      .form-actions sl-button {
-        flex: 1;
+        flex-direction: column;
       }
 
       .theme-selector {
         grid-template-columns: 1fr;
       }
+
+      .profile-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .profile-stats {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* Dark theme styles */
-    :host(.sl-theme-dark) .main-content {
-      background-color: var(--sl-color-neutral-900);
-    }
-
-    :host(.sl-theme-dark) .page-header {
-      background-color: var(--sl-color-neutral-800);
-      border-bottom-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .page-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .page-subtitle {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .profile-card {
-      background: var(--sl-color-neutral-800);
-      border-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .card-header {
-      background-color: var(--sl-color-neutral-700);
-      border-bottom-color: var(--sl-color-neutral-600);
-    }
-
-    :host(.sl-theme-dark) .card-title {
-      color: var(--sl-color-neutral-100);
-    }
-
     :host(.sl-theme-dark) .user-name {
       color: var(--sl-color-neutral-100);
     }
@@ -302,8 +222,8 @@ export class ProfilePage extends LitElement {
     }
 
     :host(.sl-theme-dark) .danger-zone {
-      background-color: var(--sl-color-danger-950);
-      border-color: var(--sl-color-danger-800);
+      background: linear-gradient(135deg, var(--sl-color-danger-950) 0%, var(--sl-color-danger-900) 100%);
+      border-color: var(--sl-color-danger-700);
     }
 
     :host(.sl-theme-dark) .danger-title {
@@ -316,10 +236,12 @@ export class ProfilePage extends LitElement {
 
     :host(.sl-theme-dark) .theme-option {
       border-color: var(--sl-color-neutral-600);
+      background: var(--sl-color-neutral-800);
     }
 
     :host(.sl-theme-dark) .theme-option.active {
-      background-color: var(--sl-color-primary-900);
+      background: var(--sl-color-primary-900);
+      border-color: var(--sl-color-primary-600);
     }
 
     :host(.sl-theme-dark) .theme-label {
@@ -329,12 +251,29 @@ export class ProfilePage extends LitElement {
     :host(.sl-theme-dark) .form-actions {
       border-top-color: var(--sl-color-neutral-600);
     }
-  `;
 
-  @property({ type: Object }) stateController!: StateController;
-  @property({ type: Object }) routerController!: RouterController;
-  @property({ type: Object }) themeController!: ThemeController;
-  @property({ type: Object }) context!: RouteContext;
+    :host(.sl-theme-dark) .meta-item {
+      border-bottom-color: var(--sl-color-neutral-700);
+    }
+
+    :host(.sl-theme-dark) .stat-card {
+      background: var(--sl-color-primary-900);
+      border-color: var(--sl-color-primary-700);
+    }
+
+    :host(.sl-theme-dark) .stat-value {
+      color: var(--sl-color-primary-400);
+    }
+
+    :host(.sl-theme-dark) .stat-label {
+      color: var(--sl-color-primary-500);
+    }
+
+    :host(.sl-theme-dark) .user-avatar {
+      background-color: var(--sl-color-primary-700);
+      border-color: var(--sl-color-primary-500);
+    }
+  `;
 
   @state() private formData = {
     name: '',
@@ -344,271 +283,48 @@ export class ProfilePage extends LitElement {
     confirmPassword: '',
   };
   @state() private isSubmitting = false;
-  @state() private error = '';
   @state() private successMessage = '';
+  @state() private currentTheme: string = 'system';
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
-    this.loadUserData();
+    this.syncThemeState();
+    await this.loadPageData();
   }
 
-  private loadUserData() {
-    const user = this.stateController.state.user;
-    if (user) {
-      this.formData = {
-        ...this.formData,
-        name: user.name || '',
-        email: user.email || '',
-      };
+  updated(changedProperties: Map<string, any>) {
+    super.updated(changedProperties);
+    // Sync theme state when theme controller changes
+    if (changedProperties.has('themeController')) {
+      this.syncThemeState();
     }
   }
 
-  render() {
-    const user = this.stateController.state.user;
-    
-    return html`
-      <div class="page-layout">
-        <app-sidebar 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .currentTeamSlug=${this.context.params.teamSlug}
-        ></app-sidebar>
-        
-        <div class="main-content">
-          <div class="page-header">
-            <h1 class="page-title">Profile Settings</h1>
-            <p class="page-subtitle">Manage your personal account settings and preferences</p>
-          </div>
-
-          <div class="page-content">
-            <div class="profile-grid">
-              <div class="profile-sidebar">
-                ${this.renderUserCard(user)}
-                ${this.renderThemeCard()}
-              </div>
-
-              <div class="profile-main">
-                ${this.renderPersonalInfoCard()}
-                ${this.renderSecurityCard()}
-                ${this.renderDangerZoneCard()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+  private syncThemeState() {
+    if (this.themeController) {
+      this.currentTheme = this.themeController.theme;
+    }
   }
 
-  private renderUserCard(user: any) {
-    return html`
-      <div class="profile-card">
-        <div class="card-header">
-          <h2 class="card-title">Profile</h2>
-        </div>
-        <div class="card-content">
-          <div class="avatar-section">
-            <div class="avatar">
-              ${user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <h3 class="user-name">${user?.name || 'User'}</h3>
-            <p class="user-email">${user?.email}</p>
-          </div>
-
-          <div class="user-meta">
-            <div class="meta-item">
-              <span>Account created:</span>
-              <span>${user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</span>
-            </div>
-            <div class="meta-item">
-              <span>Last updated:</span>
-              <span>${user?.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'Unknown'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderThemeCard() {
-    return html`
-      <div class="profile-card">
-        <div class="card-header">
-          <h2 class="card-title">Appearance</h2>
-        </div>
-        <div class="card-content">
-          <div class="theme-selector">
-            <div 
-              class="theme-option ${this.themeController.theme === 'light' ? 'active' : ''}"
-              @click=${() => this.themeController.setTheme('light')}
-            >
-              <div class="theme-icon">☀️</div>
-              <div class="theme-label">Light</div>
-            </div>
-            
-            <div 
-              class="theme-option ${this.themeController.theme === 'dark' ? 'active' : ''}"
-              @click=${() => this.themeController.setTheme('dark')}
-            >
-              <div class="theme-icon">🌙</div>
-              <div class="theme-label">Dark</div>
-            </div>
-            
-            <div 
-              class="theme-option ${this.themeController.theme === 'system' ? 'active' : ''}"
-              @click=${() => this.themeController.setTheme('system')}
-            >
-              <div class="theme-icon">🖥️</div>
-              <div class="theme-label">System</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderPersonalInfoCard() {
-    return html`
-      <div class="profile-card">
-        <div class="card-header">
-          <h2 class="card-title">Personal Information</h2>
-        </div>
-        <div class="card-content">
-          ${this.error ? html`
-            <sl-alert variant="danger" open>
-              <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
-              ${this.error}
-            </sl-alert>
-          ` : ''}
-
-          ${this.successMessage ? html`
-            <sl-alert variant="success" open>
-              <sl-icon slot="icon" name="check-circle"></sl-icon>
-              ${this.successMessage}
-            </sl-alert>
-          ` : ''}
-
-          <form @submit=${this.handlePersonalInfoSubmit}>
-            <div class="form-section">
-              <h3 class="section-title">Basic Information</h3>
-              <div class="form-grid two-columns">
-                <sl-input
-                  label="Full Name"
-                  .value=${this.formData.name}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('name', (e.target as HTMLInputElement)?.value)}
-                  required
-                ></sl-input>
-
-                <sl-input
-                  label="Email"
-                  type="email"
-                  .value=${this.formData.email}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('email', (e.target as HTMLInputElement)?.value)}
-                  required
-                  disabled
-                  help-text="Contact support to change your email"
-                ></sl-input>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <sl-button variant="default" @click=${this.resetPersonalForm}>
-                Reset
-              </sl-button>
-              <sl-button 
-                type="submit"
-                variant="primary" 
-                ?loading=${this.isSubmitting}
-              >
-                Save Changes
-              </sl-button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderSecurityCard() {
-    return html`
-      <div class="profile-card">
-        <div class="card-header">
-          <h2 class="card-title">Security</h2>
-        </div>
-        <div class="card-content">
-          <form @submit=${this.handlePasswordSubmit}>
-            <div class="form-section">
-              <h3 class="section-title">Change Password</h3>
-              <div class="form-grid">
-                <sl-input
-                  label="Current Password"
-                  type="password"
-                  .value=${this.formData.currentPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('currentPassword', (e.target as HTMLInputElement)?.value)}
-                  autocomplete="current-password"
-                ></sl-input>
-
-                <sl-input
-                  label="New Password"
-                  type="password"
-                  .value=${this.formData.newPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('newPassword', (e.target as HTMLInputElement)?.value)}
-                  autocomplete="new-password"
-                  help-text="Password must be at least 8 characters long"
-                ></sl-input>
-
-                <sl-input
-                  label="Confirm New Password"
-                  type="password"
-                  .value=${this.formData.confirmPassword}
-                  @sl-input=${(e: CustomEvent) => this.updateFormData('confirmPassword', (e.target as HTMLInputElement)?.value)}
-                  autocomplete="new-password"
-                ></sl-input>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <sl-button variant="default" @click=${this.resetPasswordForm}>
-                Reset
-              </sl-button>
-              <sl-button 
-                type="submit"
-                variant="primary" 
-                ?loading=${this.isSubmitting}
-                ?disabled=${!this.isPasswordFormValid()}
-              >
-                Update Password
-              </sl-button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderDangerZoneCard() {
-    return html`
-      <div class="profile-card">
-        <div class="card-header">
-          <h2 class="card-title">Danger Zone</h2>
-        </div>
-        <div class="card-content">
-          <div class="danger-zone">
-            <h3 class="danger-title">Delete Account</h3>
-            <p class="danger-description">
-              Permanently delete your account and all associated data. This action cannot be undone.
-            </p>
-            <sl-button variant="danger" @click=${this.handleDeleteAccount}>
-              Delete Account
-            </sl-button>
-          </div>
-        </div>
-      </div>
-    `;
+  protected async loadPageData(): Promise<void> {
+    await this.withPageLoading(async () => {
+      const user = this.stateController.state.user;
+      if (user) {
+        this.formData = {
+          ...this.formData,
+          name: (user as any).user_metadata?.name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+        };
+      }
+      
+      // Simulate loading profile data
+      await new Promise(resolve => setTimeout(resolve, 300));
+    });
   }
 
   private updateFormData(key: string, value: string) {
     this.formData = { ...this.formData, [key]: value };
+    this.clearPageError();
   }
 
   private isPasswordFormValid(): boolean {
@@ -620,8 +336,9 @@ export class ProfilePage extends LitElement {
   }
 
   private resetPersonalForm() {
-    this.loadUserData();
-    this.clearMessages();
+    this.loadPageData();
+    this.clearPageError();
+    this.successMessage = '';
   }
 
   private resetPasswordForm() {
@@ -631,40 +348,53 @@ export class ProfilePage extends LitElement {
       newPassword: '',
       confirmPassword: '',
     };
-    this.clearMessages();
-  }
-
-  private clearMessages() {
-    this.error = '';
+    this.clearPageError();
     this.successMessage = '';
   }
 
   private async handlePersonalInfoSubmit(event: Event) {
     event.preventDefault();
-    // TODO: Implement profile update
-    this.successMessage = 'Profile updated successfully!';
-    setTimeout(() => this.successMessage = '', 3000);
+    
+    this.isSubmitting = true;
+    this.clearPageError();
+    this.successMessage = '';
+
+    try {
+      // TODO: Implement profile update with Supabase
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      this.successMessage = 'Profile updated successfully!';
+      setTimeout(() => this.successMessage = '', 3000);
+    } catch (error) {
+      this.pageError = error instanceof Error ? error.message : 'Failed to update profile';
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 
   private async handlePasswordSubmit(event: Event) {
     event.preventDefault();
     
-    if (!this.isPasswordFormValid()) return;
+    if (!this.isPasswordFormValid()) {
+      this.pageError = 'Please fill in all password fields correctly';
+      return;
+    }
 
     this.isSubmitting = true;
-    this.clearMessages();
+    this.clearPageError();
+    this.successMessage = '';
 
     try {
       const { error } = await supabase.updatePassword(this.formData.newPassword);
       
       if (error) {
-        this.error = error.message;
-      } else {
-        this.successMessage = 'Password updated successfully!';
-        this.resetPasswordForm();
+        throw new Error(error.message);
       }
+      
+      this.successMessage = 'Password updated successfully!';
+      this.resetPasswordForm();
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Password update failed';
+      this.pageError = error instanceof Error ? error.message : 'Password update failed';
     } finally {
       this.isSubmitting = false;
     }
@@ -676,6 +406,261 @@ export class ProfilePage extends LitElement {
 
     // TODO: Implement account deletion
     alert('Account deletion is not implemented yet. Please contact support.');
+  }
+
+  private handleThemeChange(theme: 'light' | 'dark' | 'system') {
+    this.themeController.setTheme(theme);
+    // Sync state after theme change
+    this.syncThemeState();
+  }
+
+  private renderUserCard() {
+    const user = this.stateController.state.user;
+    const supabaseUser = user as any;
+    const userName = supabaseUser?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+
+    return html`
+      <div class="content-card">
+        <div class="avatar-section">
+          <div class="user-avatar">
+            ${userName.charAt(0).toUpperCase()}
+          </div>
+          <h3 class="user-name">${userName}</h3>
+          <p class="user-email">${user?.email}</p>
+        </div>
+
+        <div class="user-meta">
+          <div class="meta-item">
+            <span>Account created:</span>
+            <span>${supabaseUser?.created_at ? new Date(supabaseUser.created_at).toLocaleDateString() : 'Unknown'}</span>
+          </div>
+          <div class="meta-item">
+            <span>Last sign in:</span>
+            <span>${supabaseUser?.last_sign_in_at ? new Date(supabaseUser.last_sign_in_at).toLocaleDateString() : 'Unknown'}</span>
+          </div>
+          <div class="meta-item">
+            <span>Email confirmed:</span>
+            <span>${supabaseUser?.email_confirmed_at ? '✅ Yes' : '❌ No'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderThemeCard() {
+    return html`
+      <div class="content-card">
+        <h3 style="margin: 0 0 1rem 0;">Appearance</h3>
+        <div class="theme-selector">
+          <div 
+            class="theme-option ${this.currentTheme === 'light' ? 'active' : ''}"
+            @click=${() => this.handleThemeChange('light')}
+          >
+            <div class="theme-icon">☀️</div>
+            <div class="theme-label">Light</div>
+          </div>
+          
+          <div 
+            class="theme-option ${this.currentTheme === 'dark' ? 'active' : ''}"
+            @click=${() => this.handleThemeChange('dark')}
+          >
+            <div class="theme-icon">🌙</div>
+            <div class="theme-label">Dark</div>
+          </div>
+          
+          <div 
+            class="theme-option ${this.currentTheme === 'system' ? 'active' : ''}"
+            @click=${() => this.handleThemeChange('system')}
+          >
+            <div class="theme-icon">🖥️</div>
+            <div class="theme-label">System</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPersonalInfoCard() {
+    return html`
+      <div class="content-card">
+        ${this.successMessage ? html`
+          <sl-alert variant="success" open style="margin-bottom: 1.5rem;">
+            <sl-icon slot="icon" name="check-circle"></sl-icon>
+            ${this.successMessage}
+          </sl-alert>
+        ` : ''}
+
+        <form @submit=${this.handlePersonalInfoSubmit}>
+          <div class="form-section">
+            <h3 class="section-title">Personal Information</h3>
+            <div class="form-grid two-columns">
+              <sl-input
+                label="Full Name"
+                .value=${this.formData.name}
+                @sl-input=${(e: any) => this.updateFormData('name', e.target.value)}
+                required
+              ></sl-input>
+
+              <sl-input
+                label="Email"
+                type="email"
+                .value=${this.formData.email}
+                @sl-input=${(e: any) => this.updateFormData('email', e.target.value)}
+                required
+                disabled
+                help-text="Contact support to change your email"
+              ></sl-input>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <sl-button variant="default" @click=${this.resetPersonalForm}>
+              Reset
+            </sl-button>
+            <sl-button 
+              type="submit"
+              variant="primary" 
+              ?loading=${this.isSubmitting}
+            >
+              Save Changes
+            </sl-button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  private renderSecurityCard() {
+    return html`
+      <div class="content-card">
+        <form @submit=${this.handlePasswordSubmit}>
+          <div class="form-section">
+            <h3 class="section-title">Change Password</h3>
+            <div class="form-grid">
+              <sl-input
+                label="Current Password"
+                type="password"
+                .value=${this.formData.currentPassword}
+                @sl-input=${(e: any) => this.updateFormData('currentPassword', e.target.value)}
+                autocomplete="current-password"
+              ></sl-input>
+
+              <sl-input
+                label="New Password"
+                type="password"
+                .value=${this.formData.newPassword}
+                @sl-input=${(e: any) => this.updateFormData('newPassword', e.target.value)}
+                autocomplete="new-password"
+                help-text="Password must be at least 8 characters long"
+              ></sl-input>
+
+              <sl-input
+                label="Confirm New Password"
+                type="password"
+                .value=${this.formData.confirmPassword}
+                @sl-input=${(e: any) => this.updateFormData('confirmPassword', e.target.value)}
+                autocomplete="new-password"
+              ></sl-input>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <sl-button variant="default" @click=${this.resetPasswordForm}>
+              Reset
+            </sl-button>
+            <sl-button 
+              type="submit"
+              variant="primary" 
+              ?loading=${this.isSubmitting}
+              ?disabled=${!this.isPasswordFormValid()}
+            >
+              Update Password
+            </sl-button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  private renderDangerZoneCard() {
+    return html`
+      <div class="content-card">
+        <h3 style="margin: 0 0 1rem 0;">Danger Zone</h3>
+        <div class="danger-zone">
+          <h4 class="danger-title">Delete Account</h4>
+          <p class="danger-description">
+            Permanently delete your account and all associated data. This action cannot be undone.
+          </p>
+          <sl-button variant="danger" @click=${this.handleDeleteAccount}>
+            <sl-icon slot="prefix" name="trash"></sl-icon>
+            Delete Account
+          </sl-button>
+        </div>
+      </div>
+    `;
+  }
+
+  protected renderPageContent() {
+    if (this.isLoading) {
+      return this.renderLoading('Loading profile...');
+    }
+
+    const user = this.stateController.state.user;
+    const userName = (user as any)?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+
+    const profileStats = [
+      { label: 'Account Status', value: 'Active', icon: 'check-circle' },
+      { label: 'Teams', value: this.stateController.state.accounts?.filter(acc => acc.account_type === 'team').length || 0, icon: 'people' },
+      { label: 'Projects', value: 0, icon: 'collection' },
+      { label: 'Last Active', value: 'Today', icon: 'clock' }
+    ];
+
+    return html`
+      ${this.renderPageHeader(
+        `${userName}'s Profile`,
+        'Manage your personal account settings and preferences',
+        html`
+          <sl-button variant="default" @click=${() => this.refreshPageData()}>
+            <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+            Refresh
+          </sl-button>
+        `
+      )}
+
+      <div class="page-content">
+        ${this.renderStats(profileStats)}
+
+        <div class="content-grid cols-2">
+          <!-- Left Column -->
+          <div class="content-section">
+            ${this.renderSectionHeader('Profile Overview')}
+            ${this.renderUserCard()}
+          </div>
+
+          <div class="content-section">
+            ${this.renderSectionHeader('Appearance')}
+            ${this.renderThemeCard()}
+          </div>
+
+          <!-- Right Column -->
+          <div class="content-section">
+            ${this.renderSectionHeader('Personal Information')}
+            ${this.renderPersonalInfoCard()}
+          </div>
+
+          <div class="content-section">
+            ${this.renderSectionHeader('Security')}
+            ${this.renderSecurityCard()}
+          </div>
+
+          <!-- Full Width -->
+          <div class="content-section" style="grid-column: 1 / -1;">
+            ${this.renderSectionHeader('Account Management')}
+            ${this.renderDangerZoneCard()}
+          </div>
+        </div>
+      </div>
+    `;
   }
 }
 

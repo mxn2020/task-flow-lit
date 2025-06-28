@@ -87,10 +87,9 @@ export class ThemeController implements ReactiveController {
   }
 
   toggleTheme() {
-    const themes: Theme[] = ['light', 'dark', 'system'];
-    const currentIndex = themes.indexOf(this._theme);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    this.setTheme(themes[nextIndex]);
+    // Only toggle between 'light' and 'dark'
+    const nextTheme: Theme = this._resolvedTheme === 'dark' ? 'light' : 'dark';
+    this.setTheme(nextTheme);
   }
 }
 

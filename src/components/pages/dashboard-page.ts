@@ -1,111 +1,54 @@
 // src/components/pages/dashboard-page.ts
-import { LitElement, html, css } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { StateController } from '../../controllers/state-controller';
-import { RouterController } from '../../controllers/router-controller';
-import { ThemeController } from '../../controllers/theme-controller';
+import { html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { BasePage } from '../base/base-page';
 
 @customElement('dashboard-page')
-export class DashboardPage extends LitElement {
+export class UpdatedDashboardPage extends BasePage {
   static styles = css`
-    :host {
-      display: block;
-      min-height: 100vh;
-      background-color: var(--sl-color-neutral-50);
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .header {
-      margin-bottom: 3rem;
+    ${BasePage.styles}
+    
+    /* Dashboard-specific styles */
+    .welcome-section {
+      background: linear-gradient(135deg, var(--sl-color-primary-500), var(--sl-color-primary-600));
+      color: white;
       text-align: center;
+      border-radius: var(--sl-border-radius-large);
+      padding: 3rem 2rem;
+      margin-bottom: 2rem;
     }
 
     .welcome-title {
       font-size: 2.5rem;
       font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-neutral-900);
       margin: 0 0 0.5rem 0;
     }
 
     .welcome-subtitle {
-      color: var(--sl-color-neutral-600);
       font-size: 1.1rem;
       margin: 0;
+      opacity: 0.9;
     }
 
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-bottom: 3rem;
-    }
-
-    .card {
-      background: white;
-      padding: 2rem;
-      border-radius: var(--sl-border-radius-large);
-      box-shadow: var(--sl-shadow-medium);
-      border: 1px solid var(--sl-color-neutral-200);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--sl-shadow-large);
-    }
-
-    .card-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0 0 0.5rem 0;
-    }
-
-    .card-description {
-      color: var(--sl-color-neutral-600);
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-    }
-
-    .card-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .stats-section {
-      background: linear-gradient(135deg, var(--sl-color-primary-500), var(--sl-color-primary-600));
-      color: white;
-      text-align: center;
-    }
-
-    .stats-grid {
+    .dashboard-stats {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--sl-border-radius-medium);
+      padding: 1.5rem;
+      margin-top: 2rem;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 1.5rem;
-      margin-top: 1rem;
     }
 
     .stat-item {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 1rem;
-      border-radius: var(--sl-border-radius-medium);
+      text-align: center;
     }
 
     .stat-value {
       font-size: 2rem;
       font-weight: var(--sl-font-weight-bold);
       margin-bottom: 0.25rem;
+      display: block;
     }
 
     .stat-label {
@@ -113,15 +56,66 @@ export class DashboardPage extends LitElement {
       opacity: 0.9;
     }
 
-    .user-info {
+    .user-info-card {
       background: var(--sl-color-success-50);
       border-color: var(--sl-color-success-200);
     }
 
-    .debug-section {
+    .team-card {
+      border-left: 4px solid var(--sl-color-primary-600);
+    }
+
+    .team-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0;
+    }
+
+    .team-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: var(--sl-color-neutral-50);
+      border-radius: var(--sl-border-radius-medium);
+      border: 1px solid var(--sl-color-neutral-200);
+      transition: all 0.2s ease;
+    }
+
+    .team-item:hover {
+      background: var(--sl-color-neutral-100);
+      border-color: var(--sl-color-primary-300);
+      transform: translateX(4px);
+    }
+
+    .team-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .team-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--sl-color-primary-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: var(--sl-font-weight-bold);
+      font-size: 0.875rem;
+    }
+
+    .team-name {
+      font-weight: var(--sl-font-weight-medium);
+      color: var(--sl-color-neutral-900);
+    }
+
+    .debug-card {
       background: var(--sl-color-neutral-100);
       border-color: var(--sl-color-neutral-300);
-      margin-top: 2rem;
     }
 
     .debug-info {
@@ -137,82 +131,86 @@ export class DashboardPage extends LitElement {
       word-wrap: break-word;
     }
 
-    .loading-state {
-      text-align: center;
-      padding: 3rem;
+    .system-status {
+      display: grid;
+      gap: 0.75rem;
     }
 
-    .error-state {
-      text-align: center;
-      padding: 3rem;
-      color: var(--sl-color-danger-600);
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-label {
+      font-weight: var(--sl-font-weight-medium);
+      color: var(--sl-color-neutral-700);
+    }
+
+    .status-value {
+      color: var(--sl-color-success-600);
+      font-weight: var(--sl-font-weight-medium);
     }
 
     /* Mobile styles */
     @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-
       .welcome-title {
         font-size: 2rem;
       }
 
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+      .dashboard-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .team-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
       }
     }
 
     /* Dark theme styles */
-    :host(.sl-theme-dark) {
-      background-color: var(--sl-color-neutral-900);
-    }
-
-    :host(.sl-theme-dark) .welcome-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .welcome-subtitle {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .card {
-      background: var(--sl-color-neutral-800);
-      border-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .card-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .card-description {
-      color: var(--sl-color-neutral-300);
-    }
-
-    :host(.sl-theme-dark) .user-info {
+    :host(.sl-theme-dark) .user-info-card {
       background: var(--sl-color-success-900);
       border-color: var(--sl-color-success-700);
     }
 
-    :host(.sl-theme-dark) .debug-section {
+    :host(.sl-theme-dark) .team-item {
       background: var(--sl-color-neutral-700);
       border-color: var(--sl-color-neutral-600);
     }
-  `;
 
-  @property({ type: Object }) stateController!: StateController;
-  @property({ type: Object }) routerController!: RouterController;
-  @property({ type: Object }) themeController!: ThemeController;
+    :host(.sl-theme-dark) .team-item:hover {
+      background: var(--sl-color-neutral-600);
+      border-color: var(--sl-color-primary-600);
+    }
+
+    :host(.sl-theme-dark) .team-name {
+      color: var(--sl-color-neutral-100);
+    }
+
+    :host(.sl-theme-dark) .debug-card {
+      background: var(--sl-color-neutral-700);
+      border-color: var(--sl-color-neutral-600);
+    }
+
+    :host(.sl-theme-dark) .status-label {
+      color: var(--sl-color-neutral-300);
+    }
+
+    :host(.sl-theme-dark) .status-value {
+      color: var(--sl-color-success-400);
+    }
+  `;
 
   @state() private debugLogs: string[] = [];
   @state() private showDebug = true;
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
-    this.addDebugLog('🔌 DashboardPage connected');
+    this.addDebugLog('🔌 UpdatedDashboardPage connected');
     this.addDebugLog(`📍 Current URL: ${window.location.href}`);
-    this.addDebugLog(`🔐 Controllers provided - state: ${!!this.stateController}, router: ${!!this.routerController}, theme: ${!!this.themeController}`);
+    this.addDebugLog(`🔧 Router type: ${this.routerController.constructor.name}`);
     
     if (this.stateController?.state) {
       const { user, isAuthenticated, loading, accounts, currentAccount } = this.stateController.state;
@@ -220,7 +218,6 @@ export class DashboardPage extends LitElement {
       this.addDebugLog(`🏢 Account state - accounts: ${accounts?.length || 0}, current: ${!!currentAccount}`);
       if (user) {
         this.addDebugLog(`👤 User details - email: ${user.email}, id: ${user.id?.substring(0, 8)}...`);
-        // For Supabase User type, use user_metadata property
         const metadata = (user as any).user_metadata || {};
         this.addDebugLog(`👤 User metadata: ${JSON.stringify(metadata)}`);
       }
@@ -231,18 +228,23 @@ export class DashboardPage extends LitElement {
       this.addDebugLog('❌ No StateController.state available');
     }
 
-    // Test database directly
-    this.testDatabaseConnection();
+    await this.loadPageData();
+  }
 
-    // Monitor state changes
-    // this.stateController?.addEventListener?.('state-changed', () => {
-    //   this.addDebugLog('🔄 State changed - triggering update');
-    //   this.requestUpdate();
-    // });
+  protected async loadPageData(): Promise<void> {
+    await this.withPageLoading(async () => {
+      // Test database connection
+      await this.testDatabaseConnection();
+      
+      // Simulate loading dashboard data
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      this.addDebugLog('✅ Dashboard data loaded successfully');
+    });
   }
 
   private async testDatabaseConnection() {
-    this.addDebugLog('🧪 Testing direct database connection...');
+    this.addDebugLog('🧪 Testing database connection...');
     try {
       // Import Supabase service
       const { supabase } = await import('../../services/supabase');
@@ -254,7 +256,6 @@ export class DashboardPage extends LitElement {
       // Test direct table queries
       const client = supabase.supabaseClient;
       
-      // Check if tables exist and what data is there
       this.addDebugLog('🔍 Testing table access...');
       
       // Test accounts table
@@ -271,208 +272,231 @@ export class DashboardPage extends LitElement {
         .limit(5);
       this.addDebugLog(`📊 user_accounts: ${userAccountsData?.length || 0} rows, error: ${userAccountsError?.message || 'none'}`);
       
-      // Test user_account_workspace view/table
-      const { data: workspaceData, error: workspaceError } = await client
-        .from('user_account_workspace')
-        .select('*')
-        .limit(5);
-      this.addDebugLog(`📊 user_account_workspace: ${workspaceData?.length || 0} rows, error: ${workspaceError?.message || 'none'}`);
-      
+      return true;
     } catch (error) {
       this.addDebugLog(`❌ Database test error: ${error}`);
+      throw error;
     }
   }
 
   private addDebugLog(message: string) {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
     const logMessage = `[${timestamp}] ${message}`;
-    console.log(`[DashboardPage] ${logMessage}`);
-    this.debugLogs = [...this.debugLogs.slice(-15), logMessage]; // Keep last 15 logs
+    console.log(`[UpdatedDashboardPage] ${logMessage}`);
+    this.debugLogs = [...this.debugLogs.slice(-15), logMessage];
     this.requestUpdate();
   }
 
-  render() {
+  protected renderPageContent() {
+    if (this.pageError) {
+      return this.renderError(this.pageError, () => this.refreshPageData());
+    }
+
     if (!this.stateController) {
-      this.addDebugLog('❌ No StateController provided');
       return html`
-        <div class="container">
-          <div class="error-state">
-            <h1>Configuration Error</h1>
-            <p>StateController not provided to dashboard</p>
-          </div>
+        <div class="page-content">
+          ${this.renderError('StateController not provided to dashboard', () => window.location.reload())}
         </div>
       `;
     }
 
-    const { user, isAuthenticated, loading, error, accounts, currentAccount } = this.stateController.state;
-
-    this.addDebugLog(`🎨 Rendering - loading: ${loading}, auth: ${isAuthenticated}, user: ${!!user}, error: ${!!error}`);
-
-    if (loading && !user) {
-      this.addDebugLog('⏳ Showing loading state');
-      return html`
-        <div class="container">
-          <div class="loading-state">
-            <loading-spinner size="large" text="Loading your dashboard..."></loading-spinner>
-          </div>
-          ${this.renderDebugSection()}
-        </div>
-      `;
-    }
-
-    if (error) {
-      this.addDebugLog(`❌ Error state: ${error}`);
-      return html`
-        <div class="container">
-          <div class="error-state">
-            <h1>Error Loading Dashboard</h1>
-            <p>${error}</p>
-            <sl-button @click=${this.handleRetry}>Retry</sl-button>
-          </div>
-          ${this.renderDebugSection()}
-        </div>
-      `;
+    const { user, isAuthenticated, accounts } = this.stateController.state;
+    
+    if (this.isLoading) {
+      return this.renderLoading('Loading your dashboard...');
     }
 
     if (!isAuthenticated || !user) {
-      this.addDebugLog('🔐 Not authenticated, showing auth message');
       return html`
-        <div class="container">
-          <div class="error-state">
-            <h1>Authentication Required</h1>
-            <p>Please sign in to access your dashboard.</p>
-            <sl-button variant="primary" @click=${() => this.routerController.goToSignIn()}>
-              Sign In
-            </sl-button>
-          </div>
-          ${this.renderDebugSection()}
+        <div class="page-content">
+          ${this.renderError(
+            'Authentication required to access dashboard',
+            () => this.routerController.goToSignIn()
+          )}
         </div>
       `;
     }
-
-    this.addDebugLog('✅ Rendering authenticated dashboard');
 
     // Cast user to any to access Supabase-specific properties
     const supabaseUser = user as any;
     const userName = supabaseUser.user_metadata?.name || user.email?.split('@')[0] || 'there';
     const teamAccounts = accounts?.filter(acc => acc.account_type === 'team') || [];
+    
+    const dashboardStats = [
+      { label: 'Teams', value: teamAccounts.length, icon: 'users' },
+      { label: 'Projects', value: 0, icon: 'collection' },
+      { label: 'Tasks', value: 0, icon: 'list-bullet' },
+      { label: 'Completed', value: 0, icon: 'check-circle' }
+    ];
 
     return html`
-      <div class="container">
-        <div class="header">
+      <div class="page-content">
+        <!-- Welcome Section -->
+        <div class="welcome-section">
           <h1 class="welcome-title">Welcome back, ${userName}! 👋</h1>
           <p class="welcome-subtitle">Here's your Task Flow dashboard</p>
+          
+          ${this.renderStats(dashboardStats)}
         </div>
 
-        <div class="dashboard-grid">
+        <div class="content-grid cols-2">
           <!-- User Info Card -->
-          <div class="card user-info">
-            <div class="card-icon">👤</div>
-            <h2 class="card-title">Your Account</h2>
-            <div class="card-description">
-              <p><strong>Email:</strong> ${user.email}</p>
-              <p><strong>Member since:</strong> ${new Date(supabaseUser.created_at || Date.now()).toLocaleDateString()}</p>
-              <p><strong>Email confirmed:</strong> ${supabaseUser.email_confirmed_at ? '✅ Yes' : '❌ No'}</p>
-            </div>
-            <div class="card-actions">
+          <div class="content-section">
+            ${this.renderSectionHeader('Your Account')}
+            
+            <div class="content-card user-info-card">
+              <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <sl-avatar 
+                  initial=${userName.charAt(0).toUpperCase()}
+                  size="large"
+                ></sl-avatar>
+                <div>
+                  <h3 style="margin: 0; color: var(--sl-color-success-700);">${userName}</h3>
+                  <p style="margin: 0.25rem 0 0; color: var(--sl-color-success-600);">${user.email}</p>
+                </div>
+              </div>
+              
+              <div style="display: grid; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <div class="status-item">
+                  <span class="status-label">Member since:</span>
+                  <span class="status-value">${new Date(supabaseUser.created_at || Date.now()).toLocaleDateString()}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Email confirmed:</span>
+                  <span class="status-value">${supabaseUser.email_confirmed_at ? '✅ Yes' : '❌ No'}</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Account type:</span>
+                  <span class="status-value">Personal</span>
+                </div>
+              </div>
+
               <sl-button variant="default" size="small" @click=${this.goToProfile}>
+                <sl-icon slot="prefix" name="person-circle"></sl-icon>
                 Edit Profile
               </sl-button>
             </div>
           </div>
 
-          <!-- Stats Card -->
-          <div class="card stats-section">
-            <div class="card-icon">📊</div>
-            <h2 class="card-title">Your Stats</h2>
-            <div class="stats-grid">
-              <div class="stat-item">
-                <div class="stat-value">${teamAccounts.length}</div>
-                <div class="stat-label">Teams</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">0</div>
-                <div class="stat-label">Projects</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">0</div>
-                <div class="stat-label">Tasks</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">0</div>
-                <div class="stat-label">Completed</div>
-              </div>
-            </div>
-          </div>
-
           <!-- Teams Card -->
-          <div class="card">
-            <div class="card-icon">🏢</div>
-            <h2 class="card-title">Your Teams</h2>
-            <div class="card-description">
-              ${teamAccounts.length === 0 ? html`
-                <p>You haven't created any teams yet. Teams help you organize and collaborate on projects.</p>
-              ` : html`
-                <p>You're part of ${teamAccounts.length} team${teamAccounts.length !== 1 ? 's' : ''}:</p>
-                <ul>
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'Your Teams',
+              undefined,
+              html`
+                <sl-button variant="primary" size="small" @click=${this.createTeam}>
+                  <sl-icon slot="prefix" name="plus"></sl-icon>
+                  Create Team
+                </sl-button>
+              `
+            )}
+            
+            <div class="content-card team-card">
+              ${teamAccounts.length === 0 ? this.renderEmptyState(
+                'people',
+                'No teams yet',
+                'Teams help you organize and collaborate on projects with others.',
+                html`
+                  <sl-button variant="primary" @click=${this.createTeam}>
+                    <sl-icon slot="prefix" name="plus"></sl-icon>
+                    Create Your First Team
+                  </sl-button>
+                `
+              ) : html`
+                <div class="team-list">
                   ${teamAccounts.map(team => {
                     this.addDebugLog(`🏢 Team data: ${JSON.stringify(team)}`);
-                    // Use the actual slug from the database, or fall back to ID
                     const teamSlug = team.slug || team.id;
                     this.addDebugLog(`🏢 Using team slug/id: "${teamSlug}"`);
                     
                     return html`
-                      <li>
-                        <strong>${team.name}</strong> 
-                        <sl-button variant="text" size="small" @click=${() => this.goToTeam(teamSlug)}>
-                          Open →
+                      <div class="team-item">
+                        <div class="team-info">
+                          <div class="team-avatar">${team.name?.charAt(0) || 'T'}</div>
+                          <span class="team-name">${team.name}</span>
+                        </div>
+                        <sl-button 
+                          variant="default" 
+                          size="small" 
+                          @click=${() => this.goToTeam(teamSlug)}
+                        >
+                          <sl-icon slot="prefix" name="arrow-right"></sl-icon>
+                          Open
                         </sl-button>
-                      </li>
+                      </div>
                     `;
                   })}
-                </ul>
+                </div>
               `}
-            </div>
-            <div class="card-actions">
-              <sl-button variant="primary" size="small" @click=${this.createTeam}>
-                ${teamAccounts.length === 0 ? 'Create Your First Team' : 'Create New Team'}
-              </sl-button>
             </div>
           </div>
 
           <!-- Quick Actions Card -->
-          <div class="card">
-            <div class="card-icon">🚀</div>
-            <h2 class="card-title">Quick Actions</h2>
-            <div class="card-description">
-              <p>Common tasks and shortcuts to get things done faster.</p>
-            </div>
-            <div class="card-actions">
-              <sl-button variant="default" size="small" @click=${this.viewDocumentation}>
-                📚 Documentation
-              </sl-button>
-              <sl-button variant="default" size="small" @click=${this.contactSupport}>
-                💬 Support
-              </sl-button>
-              <sl-button variant="default" size="small" @click=${this.handleSignOut}>
-                🚪 Sign Out
-              </sl-button>
+          <div class="content-section">
+            ${this.renderSectionHeader('Quick Actions')}
+            
+            <div class="content-card">
+              <p style="margin-bottom: 1.5rem; color: var(--sl-color-neutral-600);">
+                Common tasks and shortcuts to get things done faster.
+              </p>
+              
+              <div style="display: grid; gap: 0.75rem;">
+                <sl-button variant="default" size="small" @click=${this.viewDocumentation}>
+                  <sl-icon slot="prefix" name="book"></sl-icon>
+                  View Documentation
+                </sl-button>
+                <sl-button variant="default" size="small" @click=${this.contactSupport}>
+                  <sl-icon slot="prefix" name="chat-dots"></sl-icon>
+                  Contact Support
+                </sl-button>
+                <sl-button variant="default" size="small" @click=${() => this.themeController.toggleTheme()}>
+                  <sl-icon slot="prefix" name=${this.themeController.theme === 'dark' ? 'sun' : 'moon-stars'}></sl-icon>
+                  Switch to ${this.themeController.theme === 'dark' ? 'Light' : 'Dark'} Mode
+                </sl-button>
+                <sl-button variant="default" size="small" @click=${this.handleSignOut}>
+                  <sl-icon slot="prefix" name="box-arrow-right"></sl-icon>
+                  Sign Out
+                </sl-button>
+              </div>
             </div>
           </div>
 
           <!-- System Status Card -->
-          <div class="card">
-            <div class="card-icon">⚡</div>
-            <h2 class="card-title">System Status</h2>
-            <div class="card-description">
-              <p><strong>App Version:</strong> 1.0.0</p>
-              <p><strong>Last Updated:</strong> Just now</p>
-              <p><strong>Status:</strong> <span style="color: var(--sl-color-success-600);">All systems operational</span></p>
-            </div>
-            <div class="card-actions">
-              <sl-button variant="text" size="small" @click=${() => this.showDebug = !this.showDebug}>
-                ${this.showDebug ? '🔍 Hide Debug' : '🐛 Show Debug'}
-              </sl-button>
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'System Status',
+              undefined,
+              html`
+                <sl-button 
+                  variant="text" 
+                  size="small" 
+                  @click=${() => this.showDebug = !this.showDebug}
+                >
+                  <sl-icon slot="prefix" name=${this.showDebug ? 'eye-slash' : 'eye'}></sl-icon>
+                  ${this.showDebug ? 'Hide' : 'Show'} Debug
+                </sl-button>
+              `
+            )}
+            
+            <div class="content-card">
+              <div class="system-status">
+                <div class="status-item">
+                  <span class="status-label">App Version:</span>
+                  <span class="status-value">1.0.0</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Last Updated:</span>
+                  <span class="status-value">Just now</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Router:</span>
+                  <span class="status-value"> ✅</span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Status:</span>
+                  <span class="status-value">All systems operational</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -482,18 +506,32 @@ export class DashboardPage extends LitElement {
     `;
   }
 
+  renderStats(stats: Array<{ label: string; value: number; icon: string }>) {
+    return html`
+      <div class="dashboard-stats">
+        ${stats.map(stat => html`
+          <div class="stat-item">
+            <sl-icon name="${stat.icon}" style="font-size:2rem;margin-bottom:0.5rem;"></sl-icon>
+            <span class="stat-value">${stat.value}</span>
+            <span class="stat-label">${stat.label}</span>
+          </div>
+        `)}
+      </div>
+    `;
+  }
+
   private renderDebugSection() {
     const state = this.stateController?.state || {};
     
     return html`
-      <div class="card debug-section">
-        <div class="card-icon">🐛</div>
-        <h2 class="card-title">Debug Information</h2>
-        <div class="card-description">
-          <h3>Component Logs:</h3>
+      <div class="content-section">
+        ${this.renderSectionHeader('Debug Information')}
+        
+        <div class="content-card debug-card">
+          <h4 style="margin-top: 0;">Component Logs:</h4>
           <div class="debug-info">${this.debugLogs.join('\n')}</div>
           
-          <h3>Current State:</h3>
+          <h4>Current State:</h4>
           <div class="debug-info">${JSON.stringify({
             loading: state.loading,
             isAuthenticated: state.isAuthenticated,
@@ -501,27 +539,30 @@ export class DashboardPage extends LitElement {
             userEmail: state.user?.email,
             accountsCount: state.accounts?.length || 0,
             currentAccount: state.currentAccount?.name || 'none',
-            error: state.error
+            error: state.error,
+            pageLoading: this.pageLoading,
+            pageError: this.pageError,
+            routerType: this.routerController.constructor.name,
+            navigationState: this.routerController.navigationState
           }, null, 2)}</div>
         </div>
       </div>
     `;
   }
 
-  private handleRetry() {
-    this.addDebugLog('🔄 Retry requested');
-    window.location.reload();
-  }
-
   private async handleSignOut() {
     this.addDebugLog('🚪 Sign out requested');
-    try {
-      await this.stateController.signOut();
-      this.addDebugLog('✅ Sign out successful');
-      this.routerController.goToSignIn();
-    } catch (error) {
-      this.addDebugLog(`❌ Sign out error: ${error}`);
-    }
+    
+    await this.withPageLoading(async () => {
+      const result = await this.stateController.signOut();
+      if (!result?.error) {
+        this.addDebugLog('✅ Sign out successful');
+        this.routerController.goToSignIn();
+      } else {
+        this.addDebugLog(`❌ Sign out error: ${result.error}`);
+        throw new Error(result.error);
+      }
+    });
   }
 
   private createTeam() {
@@ -540,7 +581,7 @@ export class DashboardPage extends LitElement {
     }
     
     this.addDebugLog(`🚀 Navigating to team: ${teamSlug}`);
-    this.routerController.goToTeam(teamSlug);
+    this.navigateTo(`/app/${teamSlug}`);
   }
 
   private goToProfile() {

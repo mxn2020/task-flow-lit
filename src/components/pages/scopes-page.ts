@@ -327,16 +327,16 @@ export class ScopesPage extends LitElement {
   @state() private formType: SystemScopeType = 'todo';
 
   private systemScopeTypes: Array<{type: SystemScopeType, label: string, icon: string, description: string}> = [
-    { type: 'todo', label: 'Todo', icon: '✅', description: 'Task and to-do management' },
-    { type: 'note', label: 'Note', icon: '📝', description: 'Notes and documentation' },
-    { type: 'brainstorm', label: 'Brainstorm', icon: '💡', description: 'Ideas and brainstorming' },
-    { type: 'checklist', label: 'Checklist', icon: '☑️', description: 'Step-by-step checklists' },
-    { type: 'milestone', label: 'Milestone', icon: '🎯', description: 'Goals and milestones' },
-    { type: 'resource', label: 'Resource', icon: '📚', description: 'Resources and references' },
-    { type: 'bookmark', label: 'Bookmark', icon: '🔖', description: 'Bookmarks and links' },
-    { type: 'event', label: 'Event', icon: '📅', description: 'Events and calendar items' },
-    { type: 'timeblock', label: 'Time Block', icon: '⏰', description: 'Time blocking and scheduling' },
-    { type: 'flow', label: 'Flow', icon: '🔄', description: 'Workflows and processes' },
+    { type: 'todo', label: 'Todo', icon: 'check-circle', description: 'Task and to-do management' },
+    { type: 'note', label: 'Note', icon: 'pencil-square', description: 'Notes and documentation' },
+    { type: 'brainstorm', label: 'Brainstorm', icon: 'light-bulb', description: 'Ideas and brainstorming' },
+    { type: 'checklist', label: 'Checklist', icon: 'check-square', description: 'Step-by-step checklists' },
+    { type: 'milestone', label: 'Milestone', icon: 'target', description: 'Goals and milestones' },
+    { type: 'resource', label: 'Resource', icon: 'book-open', description: 'Resources and references' },
+    { type: 'bookmark', label: 'Bookmark', icon: 'bookmark', description: 'Bookmarks and links' },
+    { type: 'event', label: 'Event', icon: 'calendar', description: 'Events and calendar items' },
+    { type: 'timeblock', label: 'Time Block', icon: 'clock', description: 'Time blocking and scheduling' },
+    { type: 'flow', label: 'Flow', icon: 'arrows-right-left', description: 'Workflows and processes' },
   ];
 
   async connectedCallback() {
@@ -344,9 +344,10 @@ export class ScopesPage extends LitElement {
     await this.loadScopes();
   }
 
-  updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('context')) {
-      this.loadScopes();
+  async updated(changedProperties: Map<string, any>) {
+    const accountId = this.stateController.state.currentAccount?.id;
+    if (changedProperties.has('context') || changedProperties.has('stateController')) {
+      await this.loadScopes();
     }
   }
 
@@ -373,18 +374,10 @@ export class ScopesPage extends LitElement {
   render() {
     if (this.loading) {
       return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.context.params.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <skeleton-loader type="title"></skeleton-loader>
-              <skeleton-loader type="card" count="6"></skeleton-loader>
-            </div>
+        <div class="main-content">
+          <div class="page-content">
+            <skeleton-loader type="title"></skeleton-loader>
+            <skeleton-loader type="card" count="6"></skeleton-loader>
           </div>
         </div>
       `;
@@ -392,51 +385,34 @@ export class ScopesPage extends LitElement {
 
     if (this.error) {
       return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.context.params.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <error-message 
-                .message=${this.error}
-                @retry=${this.loadScopes}
-              ></error-message>
-            </div>
+        <div class="main-content">
+          <div class="page-content">
+            <error-message 
+              .message=${this.error}
+              @retry=${this.loadScopes}
+            ></error-message>
           </div>
         </div>
       `;
     }
 
     return html`
-      <div class="page-layout">
-        <app-sidebar 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .currentTeamSlug=${this.context.params.teamSlug}
-        ></app-sidebar>
-        
-        <div class="main-content">
-          <div class="page-header">
-            <div class="header-content">
-              <div class="header-text">
-                <h1 class="page-title">Scopes</h1>
-                <p class="page-subtitle">Organize your work with flexible scope types</p>
-              </div>
-              <sl-button variant="primary" @click=${this.handleCreateScope}>
-                <sl-icon slot="prefix" name="plus"></sl-icon>
-                Create Scope
-              </sl-button>
+      <div class="main-content">
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-text">
+              <h1 class="page-title">Scopes</h1>
+              <p class="page-subtitle">Organize your work with flexible scope types</p>
             </div>
+            <sl-button variant="primary" @click=${this.handleCreateScope}>
+              <sl-icon slot="prefix" name="plus"></sl-icon>
+              Create Scope
+            </sl-button>
           </div>
+        </div>
 
-          <div class="page-content">
-            ${this.scopes.length === 0 ? this.renderEmptyState() : this.renderScopes()}
-          </div>
+        <div class="page-content">
+          ${this.scopes.length === 0 ? this.renderEmptyState() : this.renderScopes()}
         </div>
 
         <!-- Create Scope Dialog -->
@@ -473,7 +449,9 @@ export class ScopesPage extends LitElement {
           <div class="scope-card" @click=${() => this.goToScope(scope)}>
             <div class="scope-header">
               <div class="scope-info">
-                <div class="scope-icon">${scope.icon || '📝'}</div>
+                <div class="scope-icon">
+                  <sl-icon name=${this.mapEmojiToHeroicon(scope.icon || '📝')}></sl-icon>
+                </div>
                 <h3 class="scope-name">${scope.name}</h3>
                 <p class="scope-description">${scope.description || 'No description'}</p>
               </div>
@@ -584,48 +562,47 @@ export class ScopesPage extends LitElement {
   }
 
   private async submitCreate() {
-    if (!this.formName.trim() || this.isSubmitting) return;
-
-    const accountId = this.stateController.state.currentAccount?.id;
-    if (!accountId) return;
-
+    if (this.isSubmitting) return;
     this.isSubmitting = true;
 
     try {
-      const selectedType = this.systemScopeTypes.find(t => t.type === this.formType);
-      
-      const scopeData = {
-        account_id: accountId,
-        name: this.formName.trim(),
-        description: this.formDescription.trim() || undefined,
-        icon: this.formIcon.trim() || selectedType?.icon || '📝',
-        metadata: {
-          scope_type: this.formType,
-          fields: {}
-        },
-        is_system: false,
-        show_in_sidebar: true,
-        allows_children: true,
-      };
+      const accountId = this.stateController.state.currentAccount?.id;
+      if (!accountId) throw new Error('Account not found');
 
-      const { data, error } = await supabase.createScope(scopeData);
+      const { error } = await supabase.createScope(accountId, {
+        name: this.formName.trim(),
+        description: this.formDescription?.trim() || '',
+        icon: this.formIcon.trim(),
+        type: this.formType,
+      });
+
       if (error) throw error;
 
-      if (data) {
-        this.scopes = [...this.scopes, data];
-        this.showCreateDialog = false;
-        this.resetForm();
-      }
+      this.showCreateDialog = false;
+      this.resetForm();
+      await this.loadScopes();
     } catch (error) {
       console.error('Failed to create scope:', error);
-      // TODO: Show error message
+      this.error = error instanceof Error ? error.message : 'Failed to create scope';
     } finally {
       this.isSubmitting = false;
     }
   }
 
-  private goToScope(scope: Scope) {
-    this.routerController.goToScopeItems(this.context.params.teamSlug, scope.id);
+  private mapEmojiToHeroicon(emoji: string): string {
+    switch (emoji) {
+      case '📝': return 'pencil-square';
+      case '🎯': return 'target';
+      case '✅': return 'check-circle';
+      case '☑️': return 'check-square';
+      case '📚': return 'book-open';
+      case '🔖': return 'bookmark';
+      case '📅': return 'calendar';
+      case '⏰': return 'clock';
+      case '🔄': return 'arrows-right-left';
+      case '💡': return 'light-bulb';
+      default: return 'pencil-square';
+    }
   }
 }
 

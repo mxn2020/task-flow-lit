@@ -14,7 +14,7 @@ interface ConfirmationState {
 }
 
 @customElement('confirm-page')
-export class ConfirmPage extends LitElement {
+export class UpdatedConfirmPage extends LitElement {
   static styles = css`
     :host {
       display: block;
@@ -33,11 +33,17 @@ export class ConfirmPage extends LitElement {
     .confirm-card {
       width: 100%;
       max-width: 500px;
+      background: white;
+      border-radius: var(--sl-border-radius-large);
+      box-shadow: var(--sl-shadow-large);
+      border: 1px solid var(--sl-color-neutral-200);
+      overflow: hidden;
     }
 
     .logo {
       text-align: center;
       margin-bottom: 2rem;
+      padding: 2rem 2rem 0;
     }
 
     .logo-text {
@@ -48,7 +54,7 @@ export class ConfirmPage extends LitElement {
 
     .content-section {
       text-align: center;
-      padding: 1rem;
+      padding: 1rem 2rem 2rem;
     }
 
     .status-icon {
@@ -118,6 +124,7 @@ export class ConfirmPage extends LitElement {
 
     .debug-section {
       margin-top: 2rem;
+      padding: 0 2rem 2rem;
     }
 
     .debug-content {
@@ -128,6 +135,10 @@ export class ConfirmPage extends LitElement {
       white-space: pre-wrap;
       word-wrap: break-word;
       text-align: left;
+      background: var(--sl-color-neutral-800);
+      color: var(--sl-color-neutral-100);
+      padding: 1rem;
+      border-radius: var(--sl-border-radius-medium);
     }
 
     /* Mobile responsive */
@@ -139,11 +150,28 @@ export class ConfirmPage extends LitElement {
       .actions {
         gap: 0.75rem;
       }
+
+      .logo {
+        padding: 1.5rem 1.5rem 0;
+      }
+
+      .content-section {
+        padding: 1rem 1.5rem 1.5rem;
+      }
+
+      .debug-section {
+        padding: 0 1.5rem 1.5rem;
+      }
     }
 
     /* Dark theme styles */
     :host(.sl-theme-dark) {
       background: linear-gradient(135deg, var(--sl-color-neutral-900) 0%, var(--sl-color-neutral-800) 100%);
+    }
+
+    :host(.sl-theme-dark) .confirm-card {
+      background: var(--sl-color-neutral-800);
+      border-color: var(--sl-color-neutral-700);
     }
 
     :host(.sl-theme-dark) .logo-text {
@@ -167,7 +195,7 @@ export class ConfirmPage extends LitElement {
     }
 
     :host(.sl-theme-dark) .redirect-info {
-      background-color: var(--sl-color-neutral-800);
+      background-color: var(--sl-color-neutral-700);
       border-left-color: var(--sl-color-primary-500);
     }
 
@@ -194,8 +222,9 @@ export class ConfirmPage extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    this.addDebugLog('🔌 ConfirmPage connected, starting email confirmation process');
+    this.addDebugLog('🔌 UpdatedConfirmPage connected, starting email confirmation process');
     this.addDebugLog(`📍 Current URL: ${window.location.href}`);
+    this.addDebugLog(`🔧 Router type: ${this.routerController.constructor.name}`);
     await this.handleEmailConfirmation();
   }
 
@@ -209,7 +238,7 @@ export class ConfirmPage extends LitElement {
   private addDebugLog(message: string) {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ${message}`;
-    console.log(logMessage);
+    console.log(`[UpdatedConfirmPage] ${logMessage}`);
     this.confirmationState = {
       ...this.confirmationState,
       debugInfo: [...this.confirmationState.debugInfo, logMessage]
@@ -294,12 +323,14 @@ export class ConfirmPage extends LitElement {
         // Check if this is a new user (just signed up) or existing user
         const isNewUserCheck1 = data.user.email_confirmed_at === data.user.created_at;
         const isNewUserCheck2 = new Date(data.user.created_at).getTime() > Date.now() - 60000;
+        const isNewUserCheck3 = new Date(data.user.created_at).getTime() > Date.now() - 10 * 60 * 1000; // 10 minutes window
         
         this.addDebugLog(`🔍 New user checks:`);
         this.addDebugLog(`  - email_confirmed_at === created_at: ${isNewUserCheck1}`);
         this.addDebugLog(`  - created within last minute: ${isNewUserCheck2}`);
+        this.addDebugLog(`  - created within last 10 minutes: ${isNewUserCheck3}`);
         
-        const isNewUser = isNewUserCheck1 || isNewUserCheck2;
+        const isNewUser = isNewUserCheck1 || isNewUserCheck2 || isNewUserCheck3;
         this.addDebugLog(`✅ Is new user: ${isNewUser}`);
 
         this.confirmationState = {
@@ -313,10 +344,12 @@ export class ConfirmPage extends LitElement {
 
         this.addDebugLog(`✅ Status set to success with message: "${this.confirmationState.message}"`);
 
-        // Clean up the URL
+        // Clean up the URL using the enhanced router
         const callbackUrl = callback ? decodeURIComponent(callback) : '/';
         this.addDebugLog(`🔄 Cleaning up URL, callback: ${callbackUrl}`);
-        window.history.replaceState({}, '', callbackUrl);
+        
+        // Use the enhanced router's replace method for cleaner URL management
+        this.routerController.replace(callbackUrl);
 
         // Check current auth state after verification
         const { data: { session: newSession } } = await supabase.refreshSession();
@@ -375,7 +408,7 @@ export class ConfirmPage extends LitElement {
   render() {
     return html`
       <div class="container">
-        <sl-card class="confirm-card">
+        <div class="confirm-card">
           <div class="logo">
             <div class="logo-text">Task Flow</div>
           </div>
@@ -391,7 +424,7 @@ export class ConfirmPage extends LitElement {
               </sl-details>
             </div>
           ` : ''}
-        </sl-card>
+        </div>
       </div>
     `;
   }

@@ -1,3 +1,4 @@
+// src/controllers/router-controller.ts
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 import { RouteParams, RouteContext } from '../types';
 
@@ -6,6 +7,15 @@ export interface Route {
   component: string;
   requiresAuth?: boolean;
   title?: string;
+  preload?: () => Promise<void>;
+}
+
+export interface NavigationState {
+  isNavigating: boolean;
+  from?: string;
+  to?: string;
+  startTime?: number;
+  type?: 'initial' | 'navigation' | 'account-switch'; // Added type to distinguish loading states
 }
 
 export class RouterController implements ReactiveController {
@@ -13,8 +23,15 @@ export class RouterController implements ReactiveController {
   private _currentRoute: string = '/';
   private _params: RouteParams = {};
   private _query: URLSearchParams = new URLSearchParams();
-  private _context: RouteContext | null = null; // Cache the context object
-  private debugLogs: string[] = [];
+  private _context: RouteContext | null = null;
+  private _navigationState: NavigationState = { isNavigating: false };
+  
+  // Route transition cache
+  private componentCache = new Map<string, any>();
+  private dataCache = new Map<string, any>();
+  
+  // Preloading
+  private preloadedRoutes = new Set<string>();
 
   private routes: Route[] = [
     // Public routes
@@ -24,13 +41,44 @@ export class RouterController implements ReactiveController {
     { path: '/auth/forgot-password', component: 'forgot-password-page', title: 'Forgot Password' },
     { path: '/auth/reset-password', component: 'reset-password-page', title: 'Reset Password' },
     { path: '/auth/confirm', component: 'confirm-page', title: 'Email Confirmation' },
+    { path: '/auth/email-confirmation', component: 'email-confirmation-page', title: 'Check Your Email' },
     
-    // Protected routes
-    { path: '/onboarding', component: 'onboarding-page', requiresAuth: true, title: 'Get Started' },
-    { path: '/app', component: 'dashboard-page', requiresAuth: true, title: 'Dashboard' },
-    { path: '/app/:teamSlug', component: 'team-dashboard-page', requiresAuth: true, title: 'Team Dashboard' },
-    { path: '/app/:teamSlug/scopes', component: 'scopes-page', requiresAuth: true, title: 'Scopes' },
-    { path: '/app/:teamSlug/scopes/:scopeId', component: 'scope-items-page', requiresAuth: true, title: 'Scope Items' },
+    // Protected routes with preloading
+    { 
+      path: '/onboarding', 
+      component: 'onboarding-page', 
+      requiresAuth: true, 
+      title: 'Get Started',
+      preload: () => this.preloadUserData()
+    },
+    { 
+      path: '/app', 
+      component: 'dashboard-page', 
+      requiresAuth: true, 
+      title: 'Dashboard',
+      preload: () => this.preloadDashboardData()
+    },
+    { 
+      path: '/app/:teamSlug', 
+      component: 'team-dashboard-page', 
+      requiresAuth: true, 
+      title: 'Team Dashboard',
+      preload: () => this.preloadTeamData()
+    },
+    { 
+      path: '/app/:teamSlug/scopes', 
+      component: 'scopes-page', 
+      requiresAuth: true, 
+      title: 'Scopes',
+      preload: () => this.preloadScopesData()
+    },
+    { 
+      path: '/app/:teamSlug/scopes/:scopeId', 
+      component: 'scope-items-page', 
+      requiresAuth: true, 
+      title: 'Scope Items',
+      preload: () => this.preloadScopeItemsData()
+    },
     { path: '/app/:teamSlug/data-settings', component: 'data-settings-page', requiresAuth: true, title: 'Data Settings' },
     { path: '/app/:teamSlug/profile', component: 'profile-page', requiresAuth: true, title: 'Profile' },
     { path: '/app/:teamSlug/team', component: 'team-page', requiresAuth: true, title: 'Team Settings' },
@@ -45,79 +93,120 @@ export class RouterController implements ReactiveController {
   constructor(host: ReactiveControllerHost) {
     this.host = host;
     host.addController(this);
-    this.addDebugLog('🚀 RouterController created');
-  }
-
-  private addDebugLog(message: string) {
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log(`[RouterController] ${logMessage}`);
-    this.debugLogs = [...this.debugLogs.slice(-10), logMessage]; // Keep last 10 logs
   }
 
   hostConnected() {
-    this.addDebugLog('🔌 RouterController connected');
     this.setupRouter();
   }
 
   hostDisconnected() {
-    this.addDebugLog('🔌 RouterController disconnected');
     window.removeEventListener('popstate', this.handlePopState);
     document.removeEventListener('click', this.handleLinkClick);
   }
 
   private setupRouter() {
-    this.addDebugLog('⚙️ Setting up router');
     // Handle initial route
-    this.updateRoute();
+    this.updateRoute('initial');
     
     // Listen for back/forward navigation
     window.addEventListener('popstate', this.handlePopState);
     
-    // Intercept link clicks
-    document.addEventListener('click', this.handleLinkClick);
-    this.addDebugLog('✅ Router setup complete');
+    // Intercept ALL link clicks globally with better targeting
+    document.addEventListener('click', this.handleLinkClick, true);
   }
 
   private handlePopState = () => {
-    this.addDebugLog('⬅️ PopState event detected');
-    this.updateRoute();
+    this.updateRoute('navigation');
   };
 
   private handleLinkClick = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const link = target.closest('a[href]') as HTMLAnchorElement;
+    // Find the closest link element with better logic
+    let target = event.target as HTMLElement;
+    let link: HTMLAnchorElement | null = null;
     
-    if (!link) return;
+    // Walk up the DOM tree to find a link
+    while (target && target !== document.body) {
+      if (target instanceof HTMLAnchorElement && target.href) {
+        link = target;
+        break;
+      }
+      // Check for Shoelace menu items or other elements with href
+      if (target.hasAttribute('href')) {
+        link = target as any;
+        break;
+      }
+      // Check for data-href attribute (custom routing)
+      if (target.hasAttribute('data-href')) {
+        const href = target.getAttribute('data-href');
+        if (href) {
+          event.preventDefault();
+          event.stopPropagation();
+          this.navigate(href);
+          return;
+        }
+      }
+      target = target.parentElement!;
+    }
+    
+    if (!link?.href) return;
     
     // Skip external links
-    if (link.hostname !== window.location.hostname) {
-      this.addDebugLog(`🔗 Skipping external link: ${link.href}`);
-      return;
+    try {
+      const linkUrl = new URL(link.href);
+      if (linkUrl.hostname !== window.location.hostname) {
+        return;
+      }
+    } catch {
+      return; // Invalid URL
     }
     
     // Skip links with target="_blank"
     if (link.target === '_blank') {
-      this.addDebugLog(`🔗 Skipping blank target link: ${link.href}`);
       return;
     }
     
     // Skip if modifier keys are pressed
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      this.addDebugLog(`🔗 Skipping modified click: ${link.href}`);
       return;
     }
     
-    this.addDebugLog(`🔗 Intercepting link click: ${link.href}`);
+    // Skip download links
+    if (link.hasAttribute('download')) {
+      return;
+    }
+    
+    // Skip mailto, tel, etc.
+    if (link.protocol !== 'http:' && link.protocol !== 'https:') {
+      return;
+    }
+    
+    console.log(`[Router] Intercepting navigation to: ${link.href}`);
     event.preventDefault();
-    this.navigate(link.pathname + link.search + link.hash);
+    event.stopPropagation();
+    
+    const url = new URL(link.href);
+    this.navigate(url.pathname + url.search + url.hash);
   };
 
-  private updateRoute() {
+  public async updateRoute(navigationType: 'initial' | 'navigation' | 'account-switch' = 'navigation') {
     const path = window.location.pathname;
     const search = window.location.search;
     
-    this.addDebugLog(`📍 Updating route from ${this._currentRoute} to ${path}`);
+    console.log(`[Router] Updating route from ${this._currentRoute} to ${path} (type: ${navigationType})`);
+    
+    // Only show loading for significant navigation changes, not within same team
+    const shouldShowLoading = this.shouldShowLoadingForNavigation(this._currentRoute, path, navigationType);
+    
+    if (shouldShowLoading) {
+      this._navigationState = {
+        isNavigating: true,
+        from: this._currentRoute,
+        to: path,
+        startTime: Date.now(),
+        type: navigationType
+      };
+      this.host.requestUpdate();
+    }
     
     this._currentRoute = path;
     this._query = new URLSearchParams(search);
@@ -128,35 +217,91 @@ export class RouterController implements ReactiveController {
     const route = this.findRoute(path);
     if (route?.title) {
       document.title = route.title;
-      this.addDebugLog(`📄 Updated document title: ${route.title}`);
     }
     
-    this.addDebugLog(`📊 Route updated - path: ${path}, component: ${route?.component}, requiresAuth: ${route?.requiresAuth}`);
+    // Preload route data if available and not already preloaded
+    if (route?.preload && !this.preloadedRoutes.has(path)) {
+      try {
+        await route.preload();
+        this.preloadedRoutes.add(path);
+      } catch (error) {
+        console.warn(`[Router] Failed to preload data for ${path}:`, error);
+      }
+    }
+    
+    // End navigation state
+    this._navigationState = {
+      isNavigating: false,
+      from: this._navigationState.from,
+      to: path,
+      startTime: this._navigationState.startTime,
+      type: navigationType
+    };
+    
     this.host.requestUpdate();
+    window.dispatchEvent(new CustomEvent('route-changed'));
+  }
+
+  // Determine if we should show loading spinner for this navigation
+  private shouldShowLoadingForNavigation(fromPath: string, toPath: string, type: 'initial' | 'navigation' | 'account-switch'): boolean {
+    // Always show loading for initial load and account switches
+    if (type === 'initial' || type === 'account-switch') {
+      return true;
+    }
+    
+    // Parse team slugs from paths
+    const fromTeamSlug = this.extractTeamSlug(fromPath);
+    const toTeamSlug = this.extractTeamSlug(toPath);
+    
+    // If navigating within the same team, don't show loading
+    if (fromTeamSlug && toTeamSlug && fromTeamSlug === toTeamSlug) {
+      console.log(`[Router] Same team navigation (${fromTeamSlug}), skipping loading state`);
+      return false;
+    }
+    
+    // If going from personal to team or vice versa, show loading
+    if ((!fromTeamSlug && toTeamSlug) || (fromTeamSlug && !toTeamSlug)) {
+      return true;
+    }
+    
+    // If switching between different teams, show loading
+    if (fromTeamSlug && toTeamSlug && fromTeamSlug !== toTeamSlug) {
+      return true;
+    }
+    
+    // For public route navigation, don't show loading
+    const fromRequiresAuth = this.findRoute(fromPath)?.requiresAuth;
+    const toRequiresAuth = this.findRoute(toPath)?.requiresAuth;
+    
+    if (!fromRequiresAuth && !toRequiresAuth) {
+      return false;
+    }
+    
+    // Default to showing loading for auth-related transitions
+    return fromRequiresAuth !== toRequiresAuth;
+  }
+
+  private extractTeamSlug(path: string): string | null {
+    const match = path.match(/^\/app\/([^\/]+)/);
+    return match ? match[1] : null;
   }
 
   private findRoute(path: string): Route | undefined {
-    this.addDebugLog(`🔍 Finding route for path: ${path}`);
-    
     // Try exact match first
     const exactMatch = this.routes.find(route => route.path === path);
     if (exactMatch) {
-      this.addDebugLog(`✅ Found exact match: ${exactMatch.component}`);
       return exactMatch;
     }
     
     // Try pattern matching
     for (const route of this.routes) {
       if (this.matchRoute(route.path, path)) {
-        this.addDebugLog(`✅ Found pattern match: ${route.component} (pattern: ${route.path})`);
         return route;
       }
     }
     
     // Return 404 route
-    const notFoundRoute = this.routes.find(route => route.path === '*');
-    this.addDebugLog(`❌ No route found, returning 404: ${notFoundRoute?.component}`);
-    return notFoundRoute;
+    return this.routes.find(route => route.path === '*');
   }
 
   private matchRoute(pattern: string, path: string): boolean {
@@ -189,38 +334,58 @@ export class RouterController implements ReactiveController {
       }
     });
     
-    this.addDebugLog(`📋 Extracted params: ${JSON.stringify(params)}`);
     return params;
   }
 
+  //  navigation with better loading state management
   navigate(path: string, replace: boolean = false) {
-    this.addDebugLog(`🧭 Navigate called: ${path} (replace: ${replace})`);
-    this.addDebugLog(`📍 Current location before navigate: ${window.location.pathname}`);
+    console.log(`[Router] Navigate called: ${path} (replace: ${replace})`);
+    
+    // Determine navigation type
+    const currentTeamSlug = this.extractTeamSlug(this._currentRoute);
+    const newTeamSlug = this.extractTeamSlug(path);
+    const navigationType = (currentTeamSlug !== newTeamSlug) ? 'account-switch' : 'navigation';
     
     if (replace) {
       window.history.replaceState(null, '', path);
-      this.addDebugLog(`🔄 Replaced history state with: ${path}`);
     } else {
       window.history.pushState(null, '', path);
-      this.addDebugLog(`➕ Pushed history state with: ${path}`);
     }
     
-    this.addDebugLog(`📍 Location after history update: ${window.location.pathname}`);
-    this.updateRoute();
+    this.updateRoute(navigationType);
   }
 
+  // Preload methods for data fetching
+  private async preloadUserData() {
+    console.log('[Router] Preloading user data');
+  }
+
+  private async preloadDashboardData() {
+    console.log('[Router] Preloading dashboard data');
+  }
+
+  private async preloadTeamData() {
+    console.log('[Router] Preloading team data');
+  }
+
+  private async preloadScopesData() {
+    console.log('[Router] Preloading scopes data');
+  }
+
+  private async preloadScopeItemsData() {
+    console.log('[Router] Preloading scope items data');
+  }
+
+  // Public API
   replace(path: string) {
-    this.addDebugLog(`🔄 Replace called: ${path}`);
     this.navigate(path, true);
   }
 
   back() {
-    this.addDebugLog('⬅️ Back called');
     window.history.back();
   }
 
   forward() {
-    this.addDebugLog('➡️ Forward called');
     window.history.forward();
   }
 
@@ -246,104 +411,126 @@ export class RouterController implements ReactiveController {
     return this._context;
   }
 
+  get navigationState(): NavigationState {
+    return this._navigationState;
+  }
+
   getCurrentComponent(): string {
     const route = this.findRoute(this._currentRoute);
-    const component = route?.component || 'not-found-page';
-    this.addDebugLog(`🎯 Getting current component: ${component} for route: ${this._currentRoute}`);
-    return component;
+    return route?.component || 'not-found-page';
   }
 
   requiresAuth(): boolean {
     const route = this.findRoute(this._currentRoute);
-    const requiresAuth = route?.requiresAuth || false;
-    this.addDebugLog(`🔐 Route requires auth: ${requiresAuth} for route: ${this._currentRoute}`);
-    return requiresAuth;
+    return route?.requiresAuth || false;
+  }
+
+  // Check if we're navigating within the same team (to avoid unnecessary loading)
+  isSameTeamNavigation(fromPath?: string, toPath?: string): boolean {
+    const from = fromPath || this._navigationState.from || this._currentRoute;
+    const to = toPath || this._navigationState.to || this._currentRoute;
+    
+    const fromTeamSlug = this.extractTeamSlug(from);
+    const toTeamSlug = this.extractTeamSlug(to);
+    
+    return !!(fromTeamSlug && toTeamSlug && fromTeamSlug === toTeamSlug);
   }
 
   // Helper methods for common navigation patterns
   goHome() {
-    this.addDebugLog('🏠 Going home');
     this.navigate('/');
   }
 
   goToSignIn() {
-    this.addDebugLog('🔑 Going to sign in');
     this.navigate('/auth/sign-in');
   }
 
   goToSignUp() {
-    this.addDebugLog('📝 Going to sign up');
     this.navigate('/auth/sign-up');
   }
 
   goToOnboarding() {
-    this.addDebugLog('🚀 Going to onboarding');
     this.navigate('/onboarding');
   }
 
   goToDashboard() {
-    this.addDebugLog('📊 Going to dashboard');
     this.navigate('/app');
   }
 
   goToTeam(teamSlug: string) {
-    this.addDebugLog(`👥 Going to team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}`);
   }
 
   goToScopes(teamSlug: string) {
-    this.addDebugLog(`📋 Going to scopes for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/scopes`);
   }
 
   goToScopeItems(teamSlug: string, scopeId: string) {
-    this.addDebugLog(`📝 Going to scope items for team: ${teamSlug}, scope: ${scopeId}`);
     this.navigate(`/app/${teamSlug}/scopes/${scopeId}`);
   }
 
   goToProfile(teamSlug: string) {
-    this.addDebugLog(`👤 Going to profile for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/profile`);
   }
 
   goToTeamSettings(teamSlug: string) {
-    this.addDebugLog(`⚙️ Going to team settings for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/team`);
   }
 
   goToTeamMembers(teamSlug: string) {
-    this.addDebugLog(`👥 Going to team members for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/team/members`);
   }
 
   goToBilling(teamSlug: string) {
-    this.addDebugLog(`💳 Going to billing for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/billing`);
   }
 
   goToDataSettings(teamSlug: string) {
-    this.addDebugLog(`📊 Going to data settings for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/data-settings`);
   }
 
   goToDocumentation(teamSlug: string) {
-    this.addDebugLog(`📚 Going to documentation for team: ${teamSlug}`);
     this.navigate(`/app/${teamSlug}/documentation`);
   }
 
   goToResetPassword() {
-    this.addDebugLog('🔐 Going to reset password');
     this.navigate('/auth/reset-password');
   }
 
   goToForgotPassword() {
-    this.addDebugLog('❓ Going to forgot password');
     this.navigate('/auth/forgot-password');
   }
 
   goToConfirm() {
-    this.addDebugLog('✅ Going to email confirmation');
     this.navigate('/auth/confirm');
+  }
+
+  goToEmailConfirmation(email?: string) {
+    const path = email ? `/auth/email-confirmation?email=${encodeURIComponent(email)}` : '/auth/email-confirmation';
+    this.navigate(path);
+  }
+
+  // Prefetch route (for hover effects)
+  prefetchRoute(path: string) {
+    const route = this.findRoute(path);
+    if (route?.preload && !this.preloadedRoutes.has(path)) {
+      route.preload().then(() => {
+        this.preloadedRoutes.add(path);
+        console.log(`[Router] Prefetched route: ${path}`);
+      }).catch(error => {
+        console.warn(`[Router] Failed to prefetch route ${path}:`, error);
+      });
+    }
+  }
+
+  // Add event listener support for compatibility with LitElement usage
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+    // For now, just forward to window (or could use an internal EventTarget if needed)
+    window.addEventListener(type, listener, options);
+  }
+
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) {
+    window.removeEventListener(type, listener, options);
   }
 }
 

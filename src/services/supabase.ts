@@ -442,6 +442,21 @@ class SupabaseService {
     return { data, error };
   }
 
+  async isOnboardingComplete(accountId: string): Promise<{ data: boolean; error: any }> {
+    const { data, error } = await this.client
+      .from('onboarding')
+      .select('completed')
+      .eq('account_id', accountId)
+      .single();
+    
+    if (error && error.code === 'PGRST116') {
+      // Record not found, onboarding not completed
+      return { data: false, error: null };
+    }
+    
+    return { data: data?.completed || false, error };
+  }
+
   // Type methods
   async getTypes(accountId: string): Promise<{ data: Type[] | null; error: any }> {
     const { data, error } = await this.client

@@ -4,9 +4,11 @@ import { ReactiveController, ReactiveControllerHost } from 'lit';
 import { User, Session } from '@supabase/supabase-js';
 import { AppState, Account } from '../types';
 import { supabase } from '../services/supabase';
+import { RouterController } from './router-controller';
 
 export class StateController implements ReactiveController {
   private host: ReactiveControllerHost;
+  private router?: RouterController;
   private sessionCheckInterval?: number;
   private _state: AppState = {
     user: null,
@@ -17,10 +19,15 @@ export class StateController implements ReactiveController {
     isAuthenticated: false,
   };
 
-  constructor(host: ReactiveControllerHost) {
+  constructor(host: ReactiveControllerHost, router?: RouterController) {
     this.host = host;
+    this.router = router;
     console.log('[StateController] Initializing with real Supabase connection');
     host.addController(this);
+  }
+
+  setRouter(router: RouterController) {
+    this.router = router;
   }
 
   hostConnected() {
@@ -88,6 +95,9 @@ export class StateController implements ReactiveController {
       // Load user workspace and accounts
       console.log('[StateController] Loading user data...');
       await this.loadUserData();
+
+      // Check if user needs onboarding after loading data
+      await this.checkAndRedirectToOnboarding();
     } catch (error) {
       console.error('Sign in error:', error);
       this.setState({ 
@@ -163,6 +173,15 @@ export class StateController implements ReactiveController {
       
       if (error) throw error;
       
+      // Reset loading state after successful signup
+      // Don't set isAuthenticated since user needs to confirm email first
+      this.setState({ loading: false });
+      
+      // Navigate to email confirmation page
+      if (this.router) {
+        this.router.goToEmailConfirmation(email);
+      }
+      
       return { data, error: null };
     } catch (error) {
       console.error('Sign up error:', error);
@@ -178,6 +197,9 @@ export class StateController implements ReactiveController {
       const { data, error } = await supabase.signIn(email, password);
       
       if (error) throw error;
+      
+      // Don't set loading: false here since onAuthStateChange will handle the authentication flow
+      // The loading state will be managed by handleSignIn method
       
       return { data, error: null };
     } catch (error) {
@@ -614,6 +636,35 @@ export class StateController implements ReactiveController {
     } catch (error) {
       console.error('[StateController] Failed to switch to team account:', error);
       return false;
+    }
+  }
+
+  private async checkAndRedirectToOnboarding() {
+    console.log('[StateController] Checking if user needs onboarding...');
+    
+    // Don't redirect if we're already on the onboarding page
+    if (window.location.pathname === '/onboarding') {
+      console.log('[StateController] Already on onboarding page, skipping redirect');
+      return;
+    }
+
+    // Check if user has any team accounts (indicating they've completed onboarding)
+    const hasTeamAccounts = this.state.accounts.some(account => account.account_type === 'team');
+    console.log('[StateController] User has team accounts:', hasTeamAccounts);
+    
+    // Check if user was created recently (within last 10 minutes) as additional new user indicator
+    const user = this.state.user;
+    const isRecentUser = user && new Date(user.created_at).getTime() > Date.now() - 10 * 60 * 1000;
+    console.log('[StateController] User is recent (created within 10 minutes):', isRecentUser);
+
+    // If user has no team accounts and is a recent user, they need onboarding
+    if (!hasTeamAccounts && isRecentUser) {
+      console.log('[StateController] User needs onboarding, redirecting...');
+      if (this.router) {
+        this.router.goToOnboarding();
+      }
+    } else {
+      console.log('[StateController] User does not need onboarding');
     }
   }
 }

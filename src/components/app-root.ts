@@ -1,18 +1,22 @@
-// src/components/app-root.ts - Minimal changes, keep your original StateController
+// src/components/app-root.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { StateController } from '../controllers/state-controller'; // Keep your original!
+import { StateController } from '../controllers/state-controller';
 import { RouterController } from '../controllers/router-controller';
 import { ThemeController } from '../controllers/theme-controller';
-import { LoadingController } from '../controllers/loading-controller'; // Add this only
+import { LoadingController } from '../controllers/loading-controller';
 
-// Import page components (keep all your existing imports)
+// Import layout components
+import './layout/app-layout';
+
+// Import page components
 import './pages/landing-page';
 import './pages/sign-in-page';
 import './pages/sign-up-page';
 import './pages/forgot-password-page';
 import './pages/reset-password-page';
 import './pages/confirm-page';
+import './pages/email-confirmation-page';
 import './pages/onboarding-page';
 import './pages/dashboard-page';
 import './pages/team-dashboard-page';
@@ -26,16 +30,20 @@ import './pages/billing-page';
 import './pages/documentation-page';
 import './pages/not-found-page';
 
+// Import updated page components
+import './pages/billing-page';
+import './pages/data-settings-page';
+import './pages/team-members-page';
+import './pages/team-page';
+
 // Import common components
 import './common/loading-spinner';
 import './common/error-message';
 import './common/skeleton-loader';
-// import './common/error-boundary'; // Add this when you create it
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
   static styles = css`
-    /* Keep all your existing styles */
     :host {
       display: block;
       min-height: 100vh;
@@ -50,13 +58,38 @@ export class AppRoot extends LitElement {
       flex-direction: column;
     }
 
-    .loading-container {
+    /* Global loading states */
+    .global-loading {
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       flex-direction: column;
       gap: 1rem;
+      background-color: var(--sl-color-neutral-0);
+    }
+
+    .global-loading.public-route {
+      background: linear-gradient(135deg, var(--sl-color-primary-50) 0%, var(--sl-color-warning-50) 100%);
+    }
+
+    .loading-content {
+      text-align: center;
+      max-width: 400px;
+      padding: 2rem;
+    }
+
+    .loading-title {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-neutral-900);
+    }
+
+    .loading-subtitle {
+      margin: 0;
+      color: var(--sl-color-neutral-600);
+      font-size: var(--sl-font-size-medium);
     }
 
     .error-container {
@@ -65,107 +98,144 @@ export class AppRoot extends LitElement {
       align-items: center;
       min-height: 100vh;
       padding: 2rem;
+      background-color: var(--sl-color-neutral-0);
     }
 
-    .page-container {
+    .error-content {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    /* Skeleton loading for protected routes */
+    .skeleton-container {
+      min-height: 100vh;
+      display: flex;
+      background-color: var(--sl-color-neutral-0);
+    }
+
+    .skeleton-sidebar {
+      width: 280px;
+      background: var(--sl-color-neutral-50);
+      border-right: 1px solid var(--sl-color-neutral-200);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .skeleton-main {
       flex: 1;
       display: flex;
       flex-direction: column;
     }
 
-    /* Keep all your existing debug styles */
-    .debug-info {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.3);
-      color: white;
-      border-radius: 4px;
-      font-size: 12px;
-      max-width: 300px;
-      z-index: 9999;
-      font-family: monospace;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(8px);
-    }
-
-    .debug-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .debug-header:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .debug-title {
-      font-weight: bold;
-      margin: 0;
-    }
-
-    .debug-toggle {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-size: 14px;
-      padding: 0;
-      width: 20px;
-      height: 20px;
+    .skeleton-header {
+      height: 64px;
+      background: var(--sl-color-neutral-50);
+      border-bottom: 1px solid var(--sl-color-neutral-200);
+      padding: 0 2rem;
       display: flex;
       align-items: center;
-      justify-content: center;
-      transition: transform 0.3s ease;
+      gap: 1rem;
     }
 
-    .debug-toggle.collapsed {
-      transform: rotate(-90deg);
+    .skeleton-content {
+      flex: 1;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
     }
 
-    .debug-content {
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 0.5rem;
-      transition: max-height 0.3s ease, padding 0.3s ease;
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
     }
 
-    .debug-content.collapsed {
-      max-height: 0;
-      padding: 0 0.5rem;
-      overflow: hidden;
+    .skeleton-card {
+      height: 200px;
+      background: var(--sl-color-neutral-100);
+      border: 1px solid var(--sl-color-neutral-200);
+      border-radius: var(--sl-border-radius-large);
     }
 
-    .debug-info pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
+    /* Public route loading */
+    .public-loading {
+      background: linear-gradient(135deg, var(--sl-color-primary-50) 0%, var(--sl-color-warning-50) 100%);
     }
 
-    .debug-info.minimized {
-      max-width: 180px;
+    .public-loading .loading-content {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: var(--sl-border-radius-large);
+      box-shadow: var(--sl-shadow-large);
+    }
+
+    /* Dark theme support */
+    :host(.sl-theme-dark) {
+      background-color: var(--sl-color-neutral-900);
+      color: var(--sl-color-neutral-100);
+    }
+
+    :host(.sl-theme-dark) .global-loading {
+      background-color: var(--sl-color-neutral-900);
+    }
+
+    :host(.sl-theme-dark) .global-loading.public-route {
+      background: linear-gradient(135deg, var(--sl-color-neutral-900) 0%, var(--sl-color-neutral-800) 100%);
+    }
+
+    :host(.sl-theme-dark) .loading-title {
+      color: var(--sl-color-neutral-100);
+    }
+
+    :host(.sl-theme-dark) .loading-subtitle {
+      color: var(--sl-color-neutral-400);
+    }
+
+    :host(.sl-theme-dark) .error-container {
+      background-color: var(--sl-color-neutral-900);
+    }
+
+    :host(.sl-theme-dark) .skeleton-container,
+    :host(.sl-theme-dark) .skeleton-sidebar,
+    :host(.sl-theme-dark) .skeleton-header {
+      background-color: var(--sl-color-neutral-800);
+      border-color: var(--sl-color-neutral-700);
+    }
+
+    :host(.sl-theme-dark) .skeleton-card {
+      background: var(--sl-color-neutral-700);
+      border-color: var(--sl-color-neutral-600);
+    }
+
+    :host(.sl-theme-dark) .public-loading .loading-content {
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .skeleton-sidebar {
+        display: none;
+      }
+      
+      .skeleton-grid {
+        grid-template-columns: 1fr;
+      }
     }
   `;
 
-  // Keep your original controllers - don't change these!
+  //  controllers
   private stateController = new StateController(this);
   private routerController = new RouterController(this);
   private themeController = new ThemeController(this);
+  private loadingController = new LoadingController(this, this.routerController);
   
-  // Add LoadingController only as a supplement
-  private loadingController = new LoadingController(this);
-  
-  // Keep all your existing state
   @state() private debugLogs: string[] = [];
   @state() private renderCount = 0;
-  @state() private debugCollapsed = false;
+
+  // State tracking for account switching
   private lastAccountSwitchRoute: string = '';
-  private lastAccountsLength = 0;
-  private pendingAccountSwitch = false;
   private accountSwitchInProgress = false;
 
   connectedCallback() {
@@ -173,13 +243,16 @@ export class AppRoot extends LitElement {
     this.addDebugLog('🔌 AppRoot connected');
     this.addDebugLog(`📍 Initial route: ${window.location.pathname}`);
     
-    // Keep your existing setup
+    // Connect controllers
+    this.stateController.setRouter(this.routerController);
+    this.loadingController.setRouter(this.routerController);
+    
+    // Setup error handling and recovery
     this.setupGlobalErrorHandlers();
     this.exposeRecoveryMethods();
   }
 
   private setupGlobalErrorHandlers() {
-    // Keep your existing implementation but add error boundary support
     window.addEventListener('unhandledrejection', (event) => {
       console.error('[AppRoot] Unhandled promise rejection:', event.reason);
       
@@ -187,7 +260,7 @@ export class AppRoot extends LitElement {
       if (error?.message?.includes('JWT') || 
           error?.message?.includes('session') || 
           error?.message?.includes('unauthorized')) {
-        console.log('[AppRoot] Auth error detected in unhandled rejection, triggering recovery...');
+        console.log('[AppRoot] Auth error detected, triggering recovery...');
         this.handleAuthError();
         event.preventDefault();
       }
@@ -197,15 +270,6 @@ export class AppRoot extends LitElement {
       console.error('[AppRoot] Unhandled JavaScript error:', event.error);
       this.addDebugLog(`💥 Error: ${event.error?.message || 'Unknown error'}`);
     });
-
-    // Keep your existing periodic check
-    setInterval(() => {
-      if (this.stateController.isStateCorrupted()) {
-        console.warn('[AppRoot] Periodic state corruption check failed, triggering recovery...');
-        this.addDebugLog('⚠️ State corruption detected, recovering...');
-        this.handleStateCorruption();
-      }
-    }, 30000);
   }
 
   private async handleAuthError() {
@@ -213,40 +277,14 @@ export class AppRoot extends LitElement {
     try {
       const recovered = await this.stateController.recoverSession();
       if (!recovered) {
-        this.addDebugLog('❌ Session recovery failed, forcing full recovery...');
         await this.stateController.forceFullRecovery();
       }
     } catch (error) {
       console.error('[AppRoot] Error recovery failed:', error);
-      this.addDebugLog(`💥 Recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
-
-  private async handleStateCorruption() {
-    this.addDebugLog('🔧 Handling state corruption...');
-    try {
-      const recovered = await this.stateController.forceFullRecovery();
-      if (recovered) {
-        this.addDebugLog('✅ State recovery successful');
-      } else {
-        this.addDebugLog('❌ State recovery failed');
-      }
-    } catch (error) {
-      console.error('[AppRoot] State recovery failed:', error);
-      this.addDebugLog(`💥 State recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  private addDebugLog(message: string) {
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log(`[AppRoot] ${logMessage}`);
-    this.debugLogs = [...this.debugLogs.slice(-15), logMessage];
-    this.requestUpdate();
   }
 
   private exposeRecoveryMethods() {
-    // Keep your existing implementation
     (window as any).taskFlowRecovery = {
       forceFullRecovery: () => this.stateController.forceFullRecovery(),
       refreshData: () => this.stateController.refreshData(),
@@ -257,30 +295,20 @@ export class AppRoot extends LitElement {
       clearError: () => this.stateController.clearError(),
       forceReload: () => window.location.reload(),
       goToMainDashboard: () => this.routerController.navigate('/app'),
-      refreshTeamDashboard: () => {
-        const teamDashboard = document.querySelector('team-dashboard-page') as any;
-        if (teamDashboard?.forceRefresh) {
-          return teamDashboard.forceRefresh();
-        }
-        console.warn('Team dashboard not found or does not have forceRefresh method');
-        return false;
-      },
       diagnose: () => {
         console.log('🔍 TASK FLOW DIAGNOSTICS');
         console.log('=========================');
         console.log('Current URL:', window.location.href);
         console.log('State:', this.stateController.state);
         console.log('Route:', this.routerController.currentRoute);
-        console.log('Is State Corrupted:', this.stateController.isStateCorrupted());
-        console.log('Local Storage:', {
-          theme: localStorage.getItem('task-flow-theme'),
-          lastRoute: localStorage.getItem('last-route')
-        });
+        console.log('Navigation State:', this.routerController.navigationState);
+        console.log('Is Same Team Navigation:', this.routerController.isSameTeamNavigation());
         return {
           url: window.location.href,
           state: this.stateController.state,
           route: this.routerController.currentRoute,
-          isCorrupted: this.stateController.isStateCorrupted()
+          navigationState: this.routerController.navigationState,
+          isSameTeamNavigation: this.routerController.isSameTeamNavigation()
         };
       }
     };
@@ -288,8 +316,14 @@ export class AppRoot extends LitElement {
     console.log('[AppRoot] 🛠️ Recovery methods exposed globally as window.taskFlowRecovery');
   }
 
+  private addDebugLog(message: string) {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(`[AppRoot] ${logMessage}`);
+    this.debugLogs = [...this.debugLogs.slice(-10), logMessage];
+  }
+
   render() {
-    // Keep your ENTIRE existing render method - don't change the logic!
     this.renderCount++;
     this.addDebugLog(`🎨 Render #${this.renderCount}`);
     
@@ -297,235 +331,160 @@ export class AppRoot extends LitElement {
     const currentComponent = this.routerController.getCurrentComponent();
     const requiresAuth = this.routerController.requiresAuth();
     const currentRoute = this.routerController.currentRoute;
+    const navigationState = this.routerController.navigationState;
+    const isNavigating = navigationState.isNavigating;
+    const isSameTeamNav = this.routerController.isSameTeamNavigation();
 
     this.addDebugLog(`📊 State - loading: ${loading}, error: ${!!error}, auth: ${isAuthenticated}, user: ${!!user}`);
     this.addDebugLog(`🧭 Route - current: ${currentRoute}, component: ${currentComponent}, requiresAuth: ${requiresAuth}`);
+    this.addDebugLog(`🔄 Navigation - isNavigating: ${isNavigating}, type: ${navigationState.type}, sameTeam: ${isSameTeamNav}`);
 
-    // Keep your existing account tracking logic
-    if (accounts.length > 0 && this.lastAccountsLength === 0) {
-      this.lastAccountsLength = accounts.length;
-      this.pendingAccountSwitch = false;
-    }
-
-    if (accounts.length > this.lastAccountsLength && this.pendingAccountSwitch) {
-      this.addDebugLog(`📈 Accounts loaded (${accounts.length}), retrying pending account switch...`);
-      this.pendingAccountSwitch = false;
-      setTimeout(() => {
-        this.handleAccountSwitchingForRoute();
-      }, 0);
-    }
-    this.lastAccountsLength = accounts.length;
-
-    // Keep ALL your existing render logic - just wrap in error boundary
-    if (loading && !this.stateController.state.user) {
-      this.addDebugLog('⏳ Showing initial loading spinner');
-      return html`
-        <div class="loading-container">
-          <loading-spinner size="large"></loading-spinner>
-          <p>Loading Task Flow...</p>
-        </div>
-        ${this.renderDebugInfo()}
-      `;
-    }
-
-    if (error) {
+    // Global error state
+    if (error && !loading) {
       this.addDebugLog(`❌ Showing global error: ${error}`);
       return html`
         <div class="error-container">
-          <error-message 
-            .message=${error}
-            @retry=${() => this.stateController.clearError()}
-          ></error-message>
+          <div class="error-content">
+            <error-message 
+              .message=${error}
+              @retry=${() => this.stateController.clearError()}
+            ></error-message>
+          </div>
         </div>
-        ${this.renderDebugInfo()}
       `;
     }
 
-    // Keep ALL your existing auth and account switching logic
-    if (requiresAuth && !isAuthenticated) {
-      this.addDebugLog(`🔐 Auth required but not authenticated - redirecting to sign in`);
-      setTimeout(() => {
-        this.addDebugLog(`🚀 Executing redirect to sign in`);
-        this.routerController.goToSignIn();
-      }, 0);
+    // Initial app loading (before any user state is determined)
+    if (loading && !user && navigationState.type === 'initial') {
+      const isPublicRoute = !requiresAuth;
+      this.addDebugLog('⏳ Showing initial app loading');
       
       return html`
-        <div class="loading-container">
-          <loading-spinner size="large"></loading-spinner>
-          <p>Redirecting to sign in...</p>
+        <div class="global-loading ${isPublicRoute ? 'public-route' : ''}">
+          <div class="loading-content">
+            <loading-spinner size="large"></loading-spinner>
+            <h1 class="loading-title">Task Flow</h1>
+            <p class="loading-subtitle">Loading your workspace...</p>
+          </div>
         </div>
-        ${this.renderDebugInfo()}
       `;
+    }
+
+    // Auth redirects with appropriate loading states
+    if (requiresAuth && !isAuthenticated) {
+      this.addDebugLog(`🔐 Auth required but not authenticated - redirecting`);
+      setTimeout(() => this.routerController.goToSignIn(), 0);
+      
+      return this.renderSkeletonLoading('Redirecting to sign in...');
     }
 
     if (!requiresAuth && isAuthenticated && this.shouldRedirectToDashboard()) {
-      this.addDebugLog(`🏠 Authenticated user on public route - redirecting to dashboard`);
-      setTimeout(() => {
-        this.addDebugLog(`🚀 Executing redirect to dashboard`);
-        this.routerController.goToDashboard();
-      }, 0);
+      this.addDebugLog(`🏠 Authenticated user on public route - redirecting`);
+      setTimeout(() => this.routerController.goToDashboard(), 0);
       
       return html`
-        <div class="loading-container">
-          <loading-spinner size="large"></loading-spinner>
-          <p>Redirecting to dashboard...</p>
+        <div class="global-loading public-route">
+          <div class="loading-content">
+            <loading-spinner size="large"></loading-spinner>
+            <h1 class="loading-title">Welcome back!</h1>
+            <p class="loading-subtitle">Redirecting to your dashboard...</p>
+          </div>
         </div>
-        ${this.renderDebugInfo()}
       `;
     }
 
-    // Keep ALL your existing account switching logic
+    // Handle account switching for team routes - only show loading if it's an account switch type navigation
     if (isAuthenticated && user) {
-      const context = this.routerController.context;
-      const teamSlug = context.params?.teamSlug;
+      const teamSlug = this.routerController.context.params?.teamSlug;
       
       if (teamSlug && this.needsAccountSwitching(currentComponent)) {
-        const neverHadAccounts = this.lastAccountsLength === 0 && accounts.length === 0;
-        const shouldShowAccountLoading = (loading || neverHadAccounts) && !this.pendingAccountSwitch;
-        
-        if (shouldShowAccountLoading) {
-          this.addDebugLog(`⏳ Waiting for accounts to load for team route: ${teamSlug}`);
-          this.pendingAccountSwitch = true;
-          return html`
-            <div class="loading-container">
-              <loading-spinner size="large"></loading-spinner>
-              <p>Loading team data...</p>
-            </div>
-            ${this.renderDebugInfo()}
-          `;
-        }
-        
         const routeChanged = this.lastAccountSwitchRoute !== currentRoute;
-        this.addDebugLog(`🔍 Route changed: ${routeChanged} (last: ${this.lastAccountSwitchRoute}, current: ${currentRoute})`);
         
-        if (routeChanged && !this.accountSwitchInProgress) {
+        // Only trigger account switching if this is an account-switch type navigation or first time
+        if (routeChanged && !this.accountSwitchInProgress && 
+            (navigationState.type === 'account-switch' || !this.lastAccountSwitchRoute)) {
           const currentAccount = this.stateController.state.currentAccount;
-          this.addDebugLog(`🔍 Current account: ${currentAccount?.slug || 'none'} (id: ${currentAccount?.id || 'none'})`);
-          this.addDebugLog(`🎯 Target team: ${teamSlug}`);
-          
           const isCorrectAccount = currentAccount && 
                                  (currentAccount.slug === teamSlug || currentAccount.id === teamSlug);
-          
-          this.addDebugLog(`✅ Is correct account: ${isCorrectAccount}`);
           
           if (!isCorrectAccount) {
             this.lastAccountSwitchRoute = currentRoute;
             this.accountSwitchInProgress = true;
-            this.addDebugLog(`🔄 Starting account switch for team: ${teamSlug}`);
             
-            this.handleAccountSwitchingForRoute().then((success) => {
+            this.handleAccountSwitching(teamSlug).finally(() => {
               this.accountSwitchInProgress = false;
-              if (success) {
-                this.addDebugLog(`✅ Account switch completed for team: ${teamSlug}`);
-              } else {
-                this.addDebugLog(`❌ Account switch failed for team: ${teamSlug}`);
-              }
-              this.requestUpdate();
-            }).catch((error) => {
-              this.accountSwitchInProgress = false;
-              console.error('[AppRoot] Account switching promise error:', error);
-              this.addDebugLog(`💥 Account switch promise error: ${error.message}`);
               this.requestUpdate();
             });
             
-            this.addDebugLog(`⏳ Account switching in progress for team: ${teamSlug}`);
-            return html`
-              <div class="loading-container">
-                <loading-spinner size="large"></loading-spinner>
-                <p>Switching to team ${teamSlug}...</p>
-              </div>
-              ${this.renderDebugInfo()}
-            `;
+            return this.renderSkeletonLoading(`Loading ${teamSlug} workspace...`);
           } else {
-            this.addDebugLog(`✅ Already on correct account for team: ${teamSlug}`);
             this.lastAccountSwitchRoute = currentRoute;
           }
         } else if (this.accountSwitchInProgress) {
-          this.addDebugLog(`⏳ Account switching still in progress for team: ${teamSlug}`);
-          return html`
-            <div class="loading-container">
-              <loading-spinner size="large"></loading-spinner>
-              <p>Switching to team ${teamSlug}...</p>
-            </div>
-            ${this.renderDebugInfo()}
-          `;
-        }
-      } else if (!teamSlug && currentComponent === 'dashboard-page') {
-        if (this.lastAccountSwitchRoute !== currentRoute) {
-          this.lastAccountSwitchRoute = currentRoute;
-          setTimeout(async () => {
-            try {
-              await this.stateController.ensureCorrectAccountForRoute();
-            } catch (error) {
-              console.error('[AppRoot] Error switching to personal account:', error);
-            }
-          }, 0);
+          return this.renderSkeletonLoading(`Loading ${teamSlug} workspace...`);
         }
       }
     }
 
-    this.addDebugLog(`✅ Rendering page component: ${currentComponent}`);
+    // Show loading state during navigation for account switches only (not same-team navigation)
+    if (requiresAuth && isNavigating && navigationState.type === 'account-switch') {
+      return this.renderSkeletonLoading('Loading...');
+    }
+
+    // Render main app layout
+    this.addDebugLog(`✅ Rendering main app layout`);
     
     return html`
       <div class="app-container">
-        <div class="page-container">
-          ${this.renderPage(currentComponent)}
-        </div>
+        ${requiresAuth ? html`
+          <app-layout
+            .stateController=${this.stateController}
+            .routerController=${this.routerController}
+            .themeController=${this.themeController}
+            .loadingController=${this.loadingController}
+          ></app-layout>
+        ` : html`
+          <!-- Public routes render directly without layout -->
+          ${this.renderPublicPage(currentComponent)}
+        `}
       </div>
-      ${this.renderDebugInfo()}
     `;
   }
 
-  // Keep ALL your existing methods exactly as they are
-  private renderDebugInfo() {
+  private renderSkeletonLoading(message: string) {
     return html`
-      <div class="debug-info ${this.debugCollapsed ? 'minimized' : ''}">
-        <div class="debug-header" @click=${this.toggleDebugCollapse}>
-          <span class="debug-title">AppRoot Debug</span>
-          <button class="debug-toggle ${this.debugCollapsed ? 'collapsed' : ''}" type="button">
-            ▼
-          </button>
+      <div class="skeleton-container">
+        <div class="skeleton-sidebar">
+          <skeleton-loader type="title"></skeleton-loader>
+          <skeleton-loader type="list" count="6"></skeleton-loader>
         </div>
-        <div class="debug-content ${this.debugCollapsed ? 'collapsed' : ''}">
-          <pre>${this.debugLogs.join('\n')}</pre>
+        <div class="skeleton-main">
+          <div class="skeleton-header">
+            <skeleton-loader type="circle" width="32px" height="32px"></skeleton-loader>
+            <skeleton-loader type="text" width="200px"></skeleton-loader>
+          </div>
+          <div class="skeleton-content">
+            <skeleton-loader type="text" width="300px"></skeleton-loader>
+            <skeleton-loader type="title"></skeleton-loader>
+            <div class="skeleton-grid">
+              ${Array(6).fill(0).map(() => html`
+                <div class="skeleton-card"></div>
+              `)}
+            </div>
+          </div>
         </div>
       </div>
     `;
   }
 
-  private toggleDebugCollapse() {
-    this.debugCollapsed = !this.debugCollapsed;
-  }
-
-  private needsAccountSwitching(component: string): boolean {
-    return component.includes('team-') || 
-           component.includes('scopes') || 
-           component.includes('scope-items') || 
-           component.includes('profile') ||
-           component.includes('billing') || 
-           component.includes('data-settings') ||
-           component.includes('documentation');
-  }
-
-  private shouldRedirectToDashboard(): boolean {
-    const publicRoutes = ['/', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/confirm'];
-    const shouldRedirect = publicRoutes.includes(this.routerController.currentRoute);
-    this.addDebugLog(`🔍 Should redirect to dashboard: ${shouldRedirect} (current route: ${this.routerController.currentRoute})`);
-    return shouldRedirect;
-  }
-
-  private renderPage(component: string) {
-    // Keep your ENTIRE existing renderPage method
+  private renderPublicPage(component: string) {
     const context = this.routerController.context;
-
-    this.addDebugLog(`🔧 Rendering component: ${component}`);
 
     switch (component) {
       case 'landing-page':
         return html`<landing-page></landing-page>`;
       
       case 'sign-in-page':
-        this.addDebugLog(`📋 Rendering sign-in-page with stateController`);
         return html`<sign-in-page .stateController=${this.stateController}></sign-in-page>`;
       
       case 'sign-up-page':
@@ -543,88 +502,18 @@ export class AppRoot extends LitElement {
           .routerController=${this.routerController}
         ></confirm-page>`;
       
-      case 'onboarding-page':
-        return html`<onboarding-page 
+      case 'email-confirmation-page':
+        return html`<email-confirmation-page 
           .stateController=${this.stateController}
-          .routerController=${this.routerController}
-        ></onboarding-page>`;
-      
-      case 'dashboard-page':
-        return html`<dashboard-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-        ></dashboard-page>`;
-      
-      case 'team-dashboard-page':
-        return html`<team-dashboard-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></team-dashboard-page>`;
-      
-      case 'scopes-page':
-        return html`<scopes-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></scopes-page>`;
-      
-      case 'scope-items-page':
-        return html`<scope-items-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></scope-items-page>`;
-      
-      case 'data-settings-page':
-        return html`<data-settings-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></data-settings-page>`;
-      
-      case 'profile-page':
-        return html`<profile-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></profile-page>`;
-      
-      case 'team-page':
-        return html`<team-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></team-page>`;
-      
-      case 'team-members-page':
-        return html`<team-members-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></team-members-page>`;
-      
-      case 'billing-page':
-        return html`<billing-page 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .context=${context}
-        ></billing-page>`;
+          .email=${context.query.get('email')}
+        ></email-confirmation-page>`;
       
       case 'documentation-page':
         return html`<documentation-page 
           .stateController=${this.stateController}
           .routerController=${this.routerController}
           .themeController=${this.themeController}
+          .loadingController=${this.loadingController}
           .context=${context}
         ></documentation-page>`;
       
@@ -634,42 +523,36 @@ export class AppRoot extends LitElement {
     }
   }
 
-  // Keep your existing handleAccountSwitchingForRoute method exactly as it is
-  private async handleAccountSwitchingForRoute() {
-    const context = this.routerController.context;
-    const teamSlug = context.params?.teamSlug;
-    const currentComponent = this.routerController.getCurrentComponent();
+  private shouldRedirectToDashboard(): boolean {
+    const publicRoutes = ['/', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/confirm', '/auth/email-confirmation'];
+    return publicRoutes.includes(this.routerController.currentRoute);
+  }
+
+  private needsAccountSwitching(component: string): boolean {
+    return component.includes('team-') || 
+           component.includes('scopes') || 
+           component.includes('scope-items') || 
+           component.includes('profile') ||
+           component.includes('billing') || 
+           component.includes('data-settings');
+  }
+
+  private async handleAccountSwitching(teamSlug: string) {
+    this.addDebugLog(`🔄 Handling account switch for team: ${teamSlug}`);
     
-    this.addDebugLog(`🔄 Executing account switch for route: ${this.routerController.currentRoute}`);
-    
-    if (teamSlug && this.needsAccountSwitching(currentComponent)) {
-      this.addDebugLog(`🔄 Ensuring correct account for team route: ${teamSlug}`);
-      
-      try {
-        const success = await this.stateController.ensureCorrectAccountForRoute(teamSlug);
-        if (!success) {
-          this.addDebugLog(`❌ Failed to switch to team account: ${teamSlug}`);
-        } else {
-          this.addDebugLog(`✅ Successfully ensured correct account for team: ${teamSlug}`);
-        }
-        return success;
-      } catch (error) {
-        console.error('[AppRoot] Error switching accounts:', error);
-        this.addDebugLog(`💥 Account switch error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        return false;
+    try {
+      const success = await this.stateController.ensureCorrectAccountForRoute(teamSlug);
+      if (success) {
+        this.addDebugLog(`✅ Successfully switched to team: ${teamSlug}`);
+      } else {
+        this.addDebugLog(`❌ Failed to switch to team: ${teamSlug}`);
       }
-    } else if (!teamSlug && currentComponent === 'dashboard-page') {
-      this.addDebugLog(`🏠 Ensuring personal account for dashboard`);
-      try {
-        const success = await this.stateController.ensureCorrectAccountForRoute();
-        return success !== false;
-      } catch (error) {
-        console.error('[AppRoot] Error switching to personal account:', error);
-        return false;
-      }
+      return success;
+    } catch (error) {
+      console.error('[AppRoot] Account switching error:', error);
+      this.addDebugLog(`💥 Account switch error: ${error instanceof Error ? error.message : 'Unknown'}`);
+      return false;
     }
-    
-    return true;
   }
 }
 

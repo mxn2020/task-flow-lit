@@ -315,21 +315,11 @@ export class ScopeItemsPage extends LitElement {
     await this.loadData();
   }
 
-  updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('context')) {
-      const oldContext = changedProperties.get('context');
-      const newContext = this.context;
-      
-      // Only reload if the scope ID actually changed
-      const oldScopeId = oldContext?.params?.scopeId;
-      const newScopeId = newContext?.params?.scopeId;
-      
-      if (oldScopeId !== newScopeId) {
-        console.log(`[ScopeItemsPage] Scope ID changed from ${oldScopeId} to ${newScopeId}, reloading data...`);
-        this.loadData();
-      } else {
-        console.log(`[ScopeItemsPage] Context changed but scope ID same (${newScopeId}), skipping reload`);
-      }
+  async updated(changedProperties: Map<string, any>) {
+    const scopeId = this.context?.params?.scopeId;
+    const accountId = this.stateController.state.currentAccount?.id;
+    if (changedProperties.has('context') || changedProperties.has('stateController')) {
+      await this.loadData();
     }
   }
 
@@ -381,18 +371,10 @@ export class ScopeItemsPage extends LitElement {
   render() {
     if (this.loading) {
       return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.context.params.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <skeleton-loader type="title"></skeleton-loader>
-              <skeleton-loader type="text" count="3"></skeleton-loader>
-            </div>
+        <div class="main-content">
+          <div class="page-content">
+            <skeleton-loader type="title"></skeleton-loader>
+            <skeleton-loader type="text" count="3"></skeleton-loader>
           </div>
         </div>
       `;
@@ -400,73 +382,56 @@ export class ScopeItemsPage extends LitElement {
 
     if (this.error) {
       return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.context.params.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <error-message 
-                .message=${this.error}
-                @retry=${this.loadData}
-                showHome
-                @go-home=${() => this.routerController.goToTeam(this.context.params.teamSlug)}
-              ></error-message>
-            </div>
+        <div class="main-content">
+          <div class="page-content">
+            <error-message 
+              .message=${this.error}
+              @retry=${this.loadData}
+              showHome
+              @go-home=${() => this.routerController.goToTeam(this.context.params.teamSlug)}
+            ></error-message>
           </div>
         </div>
       `;
     }
 
     return html`
-      <div class="page-layout">
-        <app-sidebar 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .currentTeamSlug=${this.context.params.teamSlug}
-        ></app-sidebar>
-        
-        <div class="main-content">
-          <div class="page-header">
-            <h1 class="page-title">${this.scope?.name || 'Scope Items'}</h1>
-            <p class="page-subtitle">${this.scope?.description || 'Manage items in this scope'}</p>
+      <div class="main-content">
+        <div class="page-header">
+          <h1 class="page-title">${this.scope?.name || 'Scope Items'}</h1>
+          <p class="page-subtitle">${this.scope?.description || 'Manage items in this scope'}</p>
+        </div>
+
+        <div class="page-content">
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">
+                ${this.editingItem ? 'Edit Item' : 'Create New Item'}
+              </h2>
+              <sl-button 
+                variant=${this.showCreateForm || this.editingItem ? 'default' : 'primary'}
+                @click=${this.toggleCreateForm}
+              >
+                <sl-icon slot="prefix" name=${this.showCreateForm || this.editingItem ? 'x' : 'plus'}></sl-icon>
+                ${this.showCreateForm || this.editingItem ? 'Cancel' : 'Add Item'}
+              </sl-button>
+            </div>
+
+            ${this.showCreateForm || this.editingItem ? this.renderForm() : ''}
           </div>
 
-          <div class="page-content">
-            <div class="content-section">
-              <div class="section-header">
-                <h2 class="section-title">
-                  ${this.editingItem ? 'Edit Item' : 'Create New Item'}
-                </h2>
-                <sl-button 
-                  variant=${this.showCreateForm || this.editingItem ? 'default' : 'primary'}
-                  @click=${this.toggleCreateForm}
-                >
-                  <sl-icon slot="prefix" name=${this.showCreateForm || this.editingItem ? 'x' : 'plus'}></sl-icon>
-                  ${this.showCreateForm || this.editingItem ? 'Cancel' : 'Add Item'}
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">Items (${this.items.length})</h2>
+              ${this.items.length > 0 ? html`
+                <sl-button variant="default" size="small" @click=${this.refreshItems}>
+                  <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                  Refresh
                 </sl-button>
-              </div>
-
-              ${this.showCreateForm || this.editingItem ? this.renderForm() : ''}
+              ` : ''}
             </div>
 
-            <div class="content-section">
-              <div class="section-header">
-                <h2 class="section-title">Items (${this.items.length})</h2>
-                ${this.items.length > 0 ? html`
-                  <sl-button variant="default" size="small" @click=${this.refreshItems}>
-                    <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
-                    Refresh
-                  </sl-button>
-                ` : ''}
-              </div>
-
-              ${this.items.length === 0 ? this.renderEmptyState() : this.renderItems()}
-            </div>
+            ${this.items.length === 0 ? this.renderEmptyState() : this.renderItems()}
           </div>
         </div>
       </div>

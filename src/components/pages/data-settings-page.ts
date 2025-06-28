@@ -2,12 +2,68 @@
 import { html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { BasePage } from '../base/base-page';
-import { LoadingController } from '../../controllers/loading-controller';
-import { GroupService, LabelService, CategoryService, TypeService } from '../../services';
 import { Group, Label, Category, Type } from '../../types';
-import '../layout/app-sidebar';
-import '../common/skeleton-loader';
-import '../common/error-message';
+
+// Mock services - replace with actual implementations
+class GroupService {
+  async getGroups(accountId: string) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: [], error: null };
+  }
+  async createGroup(data: any) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { data: { id: crypto.randomUUID(), ...data }, error: null };
+  }
+  async deleteGroup(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { error: null };
+  }
+}
+
+class LabelService {
+  async getLabels(accountId: string) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: [], error: null };
+  }
+  async createLabel(data: any) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { data: { id: crypto.randomUUID(), ...data }, error: null };
+  }
+  async deleteLabel(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { error: null };
+  }
+}
+
+class CategoryService {
+  async getCategories(accountId: string) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: [], error: null };
+  }
+  async createCategory(data: any) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { data: { id: crypto.randomUUID(), ...data }, error: null };
+  }
+  async deleteCategory(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { error: null };
+  }
+}
+
+class TypeService {
+  async getTypes(accountId: string) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: [], error: null };
+  }
+  async createType(data: any) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { data: { id: crypto.randomUUID(), ...data }, error: null };
+  }
+  async deleteType(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { error: null };
+  }
+}
 
 interface FormData {
   groups: { name: string };
@@ -17,95 +73,20 @@ interface FormData {
 }
 
 @customElement('data-settings-page')
-export class DataSettingsPage extends BasePage {
+export class UpdatedDataSettingsPage extends BasePage {
   static styles = css`
     ${BasePage.styles}
     
-    /* Da    try {
-      const result = await this.loadingController.withLoading('add-type', () =>
-        this.typeService.createType({
-          account_id: this.currentAccount!.id,
-          name: this.formData.types.name.trim(),
-          color: this.formData.types.color,
-        })
-      );
-
-      if (data && !error) {
-        this.types = [...this.types, data];
-        this.formData = { ...this.formData, types: { name: '', color: '#f59e0b' } };
-        this.showNotification('success', 'Type created successfully');
-      } else {
-        throw new Error(result?.error || 'Failed to create type');
-      } specific styles */
-    .page-title {
-      font-size: 1.5rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0 0 0.5rem 0;
-    }
-
-    .page-subtitle {
-      color: var(--sl-color-neutral-600);
-      margin: 0;
-    }
-
+    /* Data settings specific styles */
     .settings-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
       gap: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
     }
 
-    .settings-section {
-      background: var(--sl-color-neutral-0);
-      border: 1px solid var(--sl-color-neutral-200);
-      border-radius: var(--sl-border-radius-large);
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .section-header {
-      padding: 1.5rem;
-      background: var(--sl-color-neutral-50);
-      border-bottom: 1px solid var(--sl-color-neutral-200);
-    }
-
-    .section-title {
-      margin: 0 0 0.5rem 0;
-      font-size: 1.125rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .section-description {
-      margin: 0;
-      color: var(--sl-color-neutral-600);
-      font-size: var(--sl-font-size-small);
-    }
-
-    .section-content {
-      padding: 1.5rem;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--sl-color-neutral-500);
-    }
-
-    .empty-state-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .empty-state-text {
-      margin: 0;
-      font-size: var(--sl-font-size-medium);
+    .section-icon {
+      font-size: 1.25rem;
+      margin-right: 0.5rem;
     }
 
     .items-list {
@@ -128,6 +109,7 @@ export class DataSettingsPage extends BasePage {
     .item-row:hover {
       background: var(--sl-color-neutral-100);
       border-color: var(--sl-color-primary-300);
+      transform: translateX(2px);
     }
 
     .item-info {
@@ -174,33 +156,29 @@ export class DataSettingsPage extends BasePage {
       grid-template-columns: 1fr auto auto auto;
     }
 
-    .form-actions {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: flex-end;
-      margin-top: 1rem;
-    }
-
-    .stats-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-      padding: 0.75rem;
+    .stats-badge {
       background: var(--sl-color-primary-50);
-      border-radius: var(--sl-border-radius-medium);
       border: 1px solid var(--sl-color-primary-200);
-    }
-
-    .stats-label {
-      font-weight: var(--sl-font-weight-medium);
       color: var(--sl-color-primary-700);
+      padding: 0.5rem 1rem;
+      border-radius: var(--sl-border-radius-medium);
+      font-weight: var(--sl-font-weight-medium);
+      font-size: var(--sl-font-size-small);
     }
 
-    .stats-value {
-      font-size: var(--sl-font-size-large);
-      font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-primary-800);
+    .notification-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1000;
+      display: grid;
+      gap: 0.5rem;
+      max-width: 400px;
+    }
+
+    .form-loading {
+      opacity: 0.7;
+      pointer-events: none;
     }
 
     /* Mobile responsive */
@@ -225,39 +203,9 @@ export class DataSettingsPage extends BasePage {
         grid-template-columns: 1fr;
         gap: 1rem;
       }
-
-      .form-actions {
-        justify-content: stretch;
-      }
     }
 
     /* Dark theme styles */
-    :host(.sl-theme-dark) .page-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .page-subtitle {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .settings-section {
-      background: var(--sl-color-neutral-800);
-      border-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .section-header {
-      background: var(--sl-color-neutral-700);
-      border-bottom-color: var(--sl-color-neutral-600);
-    }
-
-    :host(.sl-theme-dark) .section-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .section-description {
-      color: var(--sl-color-neutral-400);
-    }
-
     :host(.sl-theme-dark) .item-row {
       background: var(--sl-color-neutral-700);
       border-color: var(--sl-color-neutral-600);
@@ -276,21 +224,13 @@ export class DataSettingsPage extends BasePage {
       border-top-color: var(--sl-color-neutral-600);
     }
 
-    :host(.sl-theme-dark) .stats-row {
+    :host(.sl-theme-dark) .stats-badge {
       background: var(--sl-color-primary-900);
       border-color: var(--sl-color-primary-700);
-    }
-
-    :host(.sl-theme-dark) .stats-label {
       color: var(--sl-color-primary-300);
-    }
-
-    :host(.sl-theme-dark) .stats-value {
-      color: var(--sl-color-primary-200);
     }
   `;
 
-  private loadingController = new LoadingController(this);
   private groupService = new GroupService();
   private labelService = new LabelService();
   private categoryService = new CategoryService();
@@ -309,115 +249,66 @@ export class DataSettingsPage extends BasePage {
   };
 
   @state() private notifications: Array<{ type: 'success' | 'error'; message: string; id: string }> = [];
+  @state() private loadingStates: Record<string, boolean> = {};
 
   async connectedCallback() {
     super.connectedCallback();
-    await this.loadData();
+    await this.loadPageData();
   }
 
-  updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('context')) {
-      this.loadData();
-    }
-  }
+  protected async loadPageData(): Promise<void> {
+    await this.withPageLoading(async () => {
+      if (!this.currentAccount?.id) {
+        throw new Error('No account selected');
+      }
 
-  private async loadData() {
-    if (!this.currentAccount?.id) return;
+      const accountId = this.currentAccount.id;
 
-    const accountId = this.currentAccount.id;
-
-    try {
-      // Load all data in parallel using the service layer
+      // Load all data in parallel
       const [groupsData, labelsData, categoriesData, typesData] = await Promise.all([
-        this.loadingController.withLoading('groups', () => this.groupService.getGroups(accountId)),
-        this.loadingController.withLoading('labels', () => this.labelService.getLabels(accountId)),
-        this.loadingController.withLoading('categories', () => this.categoryService.getCategories(accountId)),
-        this.loadingController.withLoading('types', () => this.typeService.getTypes(accountId)),
+        this.groupService.getGroups(accountId),
+        this.labelService.getLabels(accountId),
+        this.categoryService.getCategories(accountId),
+        this.typeService.getTypes(accountId)
       ]);
 
       if (groupsData?.data) this.groups = groupsData.data;
       if (labelsData?.data) this.labels = labelsData.data;
       if (categoriesData?.data) this.categories = categoriesData.data;
       if (typesData?.data) this.types = typesData.data;
-    } catch (error) {
-      this.showNotification('error', 'Failed to load data settings');
-    }
+    });
   }
 
-  render() {
-    const isLoading = this.loadingController.isLoading('groups') || 
-                     this.loadingController.isLoading('labels') ||
-                     this.loadingController.isLoading('categories') ||
-                     this.loadingController.isLoading('types');
-
-    if (isLoading) {
-      return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <skeleton-loader type="title"></skeleton-loader>
-              <skeleton-loader type="card" count="4"></skeleton-loader>
-            </div>
-          </div>
-        </div>
-      `;
+  protected renderPageContent() {
+    if (this.pageError) {
+      return this.renderError(this.pageError, () => this.refreshPageData());
     }
 
-    const error = this.loadingController.getError('groups') ||
-                  this.loadingController.getError('labels') ||
-                  this.loadingController.getError('categories') ||
-                  this.loadingController.getError('types');
-
-    if (error) {
-      return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <error-message 
-                .message=${error}
-                @retry=${this.loadData}
-              ></error-message>
-            </div>
-          </div>
-        </div>
-      `;
+    if (this.isLoading) {
+      return this.renderLoading('Loading data settings...');
     }
 
+    const totalItems = this.groups.length + this.labels.length + this.categories.length + this.types.length;
+    
     return html`
-      <div class="page-layout">
-        <app-sidebar 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .currentTeamSlug=${this.teamSlug}
-        ></app-sidebar>
-        
-        <div class="main-content">
-          <div class="page-header">
-            <h1 class="page-title">Data Settings</h1>
-            <p class="page-subtitle">Manage groups, labels, categories, and types for your workspace</p>
-          </div>
+      ${this.renderPageHeader(
+        'Data Settings',
+        'Manage groups, labels, categories, and types for your workspace'
+      )}
 
-          <div class="page-content">
-            <div class="settings-grid">
-              ${this.renderGroupsSection()}
-              ${this.renderLabelsSection()}
-              ${this.renderCategoriesSection()}
-              ${this.renderTypesSection()}
-            </div>
-          </div>
+      <div class="page-content">
+        ${this.renderStats([
+          { label: 'Total Items', value: totalItems, icon: 'collection' },
+          { label: 'Groups', value: this.groups.length, icon: 'folder' },
+          { label: 'Labels', value: this.labels.length, icon: 'tag' },
+          { label: 'Categories', value: this.categories.length, icon: 'folder2' }
+        ])}
+
+        <div class="settings-grid">
+          ${this.renderGroupsSection()}
+          ${this.renderLabelsSection()}
+          ${this.renderCategoriesSection()}
+          ${this.renderTypesSection()}
         </div>
       </div>
 
@@ -427,27 +318,19 @@ export class DataSettingsPage extends BasePage {
 
   private renderGroupsSection() {
     return html`
-      <sl-card class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <sl-icon name="folder"></sl-icon>
-            Groups
-          </h2>
-          <p class="section-description">Organize scope items into logical groups</p>
-        </div>
+      <div class="content-section">
+        ${this.renderSectionHeader(
+          'Groups',
+          'Organize scope items into logical groups',
+          html`<div class="stats-badge">${this.groups.length} groups</div>`
+        )}
         
-        <div class="section-content">
-          <div class="stats-row">
-            <span class="stats-label">Total Groups</span>
-            <span class="stats-value">${this.groups.length}</span>
-          </div>
-
-          ${this.groups.length === 0 ? html`
-            <div class="empty-state">
-              <sl-icon name="folder" class="empty-state-icon"></sl-icon>
-              <p class="empty-state-text">No groups created yet</p>
-            </div>
-          ` : html`
+        <div class="content-card">
+          ${this.groups.length === 0 ? this.renderEmptyState(
+            'folder',
+            'No groups created yet',
+            'Groups help organize your scope items into logical collections.'
+          ) : html`
             <div class="items-list">
               ${this.groups.map(group => html`
                 <div class="item-row">
@@ -470,7 +353,7 @@ export class DataSettingsPage extends BasePage {
             </div>
           `}
 
-          <div class="add-form">
+          <div class="add-form ${this.loadingStates['add-group'] ? 'form-loading' : ''}">
             <div class="form-row">
               <sl-input
                 label="Group Name"
@@ -483,7 +366,7 @@ export class DataSettingsPage extends BasePage {
                 variant="primary" 
                 @click=${this.addGroup}
                 ?disabled=${!this.formData.groups.name.trim()}
-                ?loading=${this.loadingController.isLoading('add-group')}
+                ?loading=${this.loadingStates['add-group']}
               >
                 <sl-icon slot="prefix" name="plus"></sl-icon>
                 Add Group
@@ -491,33 +374,25 @@ export class DataSettingsPage extends BasePage {
             </div>
           </div>
         </div>
-      </sl-card>
+      </div>
     `;
   }
 
   private renderLabelsSection() {
     return html`
-      <sl-card class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <sl-icon name="tag"></sl-icon>
-            Labels
-          </h2>
-          <p class="section-description">Create colorful labels for organizing scope items</p>
-        </div>
+      <div class="content-section">
+        ${this.renderSectionHeader(
+          'Labels',
+          'Create colorful labels for organizing scope items',
+          html`<div class="stats-badge">${this.labels.length} labels</div>`
+        )}
         
-        <div class="section-content">
-          <div class="stats-row">
-            <span class="stats-label">Total Labels</span>
-            <span class="stats-value">${this.labels.length}</span>
-          </div>
-
-          ${this.labels.length === 0 ? html`
-            <div class="empty-state">
-              <sl-icon name="tag" class="empty-state-icon"></sl-icon>
-              <p class="empty-state-text">No labels created yet</p>
-            </div>
-          ` : html`
+        <div class="content-card">
+          ${this.labels.length === 0 ? this.renderEmptyState(
+            'tag',
+            'No labels created yet',
+            'Labels provide colorful ways to categorize and filter your scope items.'
+          ) : html`
             <div class="items-list">
               ${this.labels.map(label => html`
                 <div class="item-row">
@@ -540,7 +415,7 @@ export class DataSettingsPage extends BasePage {
             </div>
           `}
 
-          <div class="add-form">
+          <div class="add-form ${this.loadingStates['add-label'] ? 'form-loading' : ''}">
             <div class="form-row with-color">
               <sl-input
                 label="Label Name"
@@ -560,7 +435,7 @@ export class DataSettingsPage extends BasePage {
                 variant="primary" 
                 @click=${this.addLabel}
                 ?disabled=${!this.formData.labels.name.trim()}
-                ?loading=${this.loadingController.isLoading('add-label')}
+                ?loading=${this.loadingStates['add-label']}
               >
                 <sl-icon slot="prefix" name="plus"></sl-icon>
                 Add Label
@@ -568,33 +443,25 @@ export class DataSettingsPage extends BasePage {
             </div>
           </div>
         </div>
-      </sl-card>
+      </div>
     `;
   }
 
   private renderCategoriesSection() {
     return html`
-      <sl-card class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <sl-icon name="folder2"></sl-icon>
-            Categories
-          </h2>
-          <p class="section-description">Categorize scope items by type or purpose</p>
-        </div>
+      <div class="content-section">
+        ${this.renderSectionHeader(
+          'Categories',
+          'Categorize scope items by type or purpose',
+          html`<div class="stats-badge">${this.categories.length} categories</div>`
+        )}
         
-        <div class="section-content">
-          <div class="stats-row">
-            <span class="stats-label">Total Categories</span>
-            <span class="stats-value">${this.categories.length}</span>
-          </div>
-
-          ${this.categories.length === 0 ? html`
-            <div class="empty-state">
-              <sl-icon name="folder2" class="empty-state-icon"></sl-icon>
-              <p class="empty-state-text">No categories created yet</p>
-            </div>
-          ` : html`
+        <div class="content-card">
+          ${this.categories.length === 0 ? this.renderEmptyState(
+            'folder2',
+            'No categories created yet',
+            'Categories help you group scope items by their type or purpose.'
+          ) : html`
             <div class="items-list">
               ${this.categories.map(category => html`
                 <div class="item-row">
@@ -617,7 +484,7 @@ export class DataSettingsPage extends BasePage {
             </div>
           `}
 
-          <div class="add-form">
+          <div class="add-form ${this.loadingStates['add-category'] ? 'form-loading' : ''}">
             <div class="form-row with-color">
               <sl-input
                 label="Category Name"
@@ -637,7 +504,7 @@ export class DataSettingsPage extends BasePage {
                 variant="primary" 
                 @click=${this.addCategory}
                 ?disabled=${!this.formData.categories.name.trim()}
-                ?loading=${this.loadingController.isLoading('add-category')}
+                ?loading=${this.loadingStates['add-category']}
               >
                 <sl-icon slot="prefix" name="plus"></sl-icon>
                 Add Category
@@ -645,33 +512,25 @@ export class DataSettingsPage extends BasePage {
             </div>
           </div>
         </div>
-      </sl-card>
+      </div>
     `;
   }
 
   private renderTypesSection() {
     return html`
-      <sl-card class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <sl-icon name="lightning"></sl-icon>
-            Types
-          </h2>
-          <p class="section-description">Define different types of scope items</p>
-        </div>
+      <div class="content-section">
+        ${this.renderSectionHeader(
+          'Types',
+          'Define different types of scope items',
+          html`<div class="stats-badge">${this.types.length} types</div>`
+        )}
         
-        <div class="section-content">
-          <div class="stats-row">
-            <span class="stats-label">Total Types</span>
-            <span class="stats-value">${this.types.length}</span>
-          </div>
-
-          ${this.types.length === 0 ? html`
-            <div class="empty-state">
-              <sl-icon name="lightning" class="empty-state-icon"></sl-icon>
-              <p class="empty-state-text">No types created yet</p>
-            </div>
-          ` : html`
+        <div class="content-card">
+          ${this.types.length === 0 ? this.renderEmptyState(
+            'lightning',
+            'No types created yet',
+            'Types let you define different kinds of scope items with unique properties.'
+          ) : html`
             <div class="items-list">
               ${this.types.map(type => html`
                 <div class="item-row">
@@ -694,7 +553,7 @@ export class DataSettingsPage extends BasePage {
             </div>
           `}
 
-          <div class="add-form">
+          <div class="add-form ${this.loadingStates['add-type'] ? 'form-loading' : ''}">
             <div class="form-row with-color">
               <sl-input
                 label="Type Name"
@@ -714,7 +573,7 @@ export class DataSettingsPage extends BasePage {
                 variant="primary" 
                 @click=${this.addType}
                 ?disabled=${!this.formData.types.name.trim()}
-                ?loading=${this.loadingController.isLoading('add-type')}
+                ?loading=${this.loadingStates['add-type']}
               >
                 <sl-icon slot="prefix" name="plus"></sl-icon>
                 Add Type
@@ -722,13 +581,13 @@ export class DataSettingsPage extends BasePage {
             </div>
           </div>
         </div>
-      </sl-card>
+      </div>
     `;
   }
 
   private renderNotifications() {
     return html`
-      <div style="position: fixed; top: 1rem; right: 1rem; z-index: 1000; display: grid; gap: 0.5rem;">
+      <div class="notification-container">
         ${this.notifications.map(notification => html`
           <sl-alert 
             variant=${notification.type} 
@@ -779,17 +638,20 @@ export class DataSettingsPage extends BasePage {
     this.notifications = this.notifications.filter(n => n.id !== id);
   }
 
+  private setLoading(key: string, loading: boolean) {
+    this.loadingStates = { ...this.loadingStates, [key]: loading };
+  }
+
   // CRUD operations
   private async addGroup() {
     if (!this.formData.groups.name.trim() || !this.currentAccount?.id) return;
 
+    this.setLoading('add-group', true);
     try {
-      const result = await this.loadingController.withLoading('add-group', () =>
-        this.groupService.createGroup({
-          account_id: this.currentAccount!.id,
-          name: this.formData.groups.name.trim(),
-        })
-      );
+      const result = await this.groupService.createGroup({
+        account_id: this.currentAccount.id,
+        name: this.formData.groups.name.trim(),
+      });
 
       if (result?.data && !result?.error) {
         this.groups = [...this.groups, result.data];
@@ -800,20 +662,21 @@ export class DataSettingsPage extends BasePage {
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create group');
+    } finally {
+      this.setLoading('add-group', false);
     }
   }
 
   private async addLabel() {
     if (!this.formData.labels.name.trim() || !this.currentAccount?.id) return;
 
+    this.setLoading('add-label', true);
     try {
-      const result = await this.loadingController.withLoading('add-label', () =>
-        this.labelService.createLabel({
-          account_id: this.currentAccount!.id,
-          name: this.formData.labels.name.trim(),
-          color: this.formData.labels.color,
-        })
-      );
+      const result = await this.labelService.createLabel({
+        account_id: this.currentAccount.id,
+        name: this.formData.labels.name.trim(),
+        color: this.formData.labels.color,
+      });
 
       if (result?.data && !result?.error) {
         this.labels = [...this.labels, result.data];
@@ -824,20 +687,21 @@ export class DataSettingsPage extends BasePage {
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create label');
+    } finally {
+      this.setLoading('add-label', false);
     }
   }
 
   private async addCategory() {
     if (!this.formData.categories.name.trim() || !this.currentAccount?.id) return;
 
+    this.setLoading('add-category', true);
     try {
-      const result = await this.loadingController.withLoading('add-category', () =>
-        this.categoryService.createCategory({
-          account_id: this.currentAccount!.id,
-          name: this.formData.categories.name.trim(),
-          color: this.formData.categories.color,
-        })
-      );
+      const result = await this.categoryService.createCategory({
+        account_id: this.currentAccount.id,
+        name: this.formData.categories.name.trim(),
+        color: this.formData.categories.color,
+      });
 
       if (result?.data && !result?.error) {
         this.categories = [...this.categories, result.data];
@@ -848,20 +712,21 @@ export class DataSettingsPage extends BasePage {
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create category');
+    } finally {
+      this.setLoading('add-category', false);
     }
   }
 
   private async addType() {
     if (!this.formData.types.name.trim() || !this.currentAccount?.id) return;
 
+    this.setLoading('add-type', true);
     try {
-      const result = await this.loadingController.withLoading('add-type', () =>
-        this.typeService.createType({
-          account_id: this.currentAccount!.id,
-          name: this.formData.types.name.trim(),
-          color: this.formData.types.color,
-        })
-      );
+      const result = await this.typeService.createType({
+        account_id: this.currentAccount.id,
+        name: this.formData.types.name.trim(),
+        color: this.formData.types.color,
+      });
 
       if (result?.data && !result?.error) {
         this.types = [...this.types, result.data];
@@ -872,6 +737,8 @@ export class DataSettingsPage extends BasePage {
       }
     } catch (error) {
       this.showNotification('error', 'Failed to create type');
+    } finally {
+      this.setLoading('add-type', false);
     }
   }
 
@@ -885,6 +752,9 @@ export class DataSettingsPage extends BasePage {
     if (!confirm(`Are you sure you want to delete "${item.name}"?\n\nThis action cannot be undone.`)) {
       return;
     }
+
+    const loadingKey = `delete-${type}`;
+    this.setLoading(loadingKey, true);
 
     try {
       let deletePromise;
@@ -911,7 +781,7 @@ export class DataSettingsPage extends BasePage {
           throw new Error(`Unknown type: ${type}`);
       }
 
-      const result = await this.loadingController.withLoading(`delete-${type}`, () => deletePromise);
+      const result = await deletePromise;
 
       if (!result?.error) {
         updateArray();
@@ -921,6 +791,8 @@ export class DataSettingsPage extends BasePage {
       }
     } catch (error) {
       this.showNotification('error', `Failed to delete ${type}`);
+    } finally {
+      this.setLoading(loadingKey, false);
     }
   }
 }

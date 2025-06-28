@@ -51,43 +51,33 @@
       min-height: 100vh;
     }
 
-    .app-loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
+    /* Remove the loading spinner - the app will handle its own loading states */
     .hidden {
       display: none !important;
     }
 
-    /* Fallback loading spinner */
-    .loading-fallback {
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #f97316;
-      border-radius: 50%;
-      width: 2rem;
-      height: 2rem;
-      animation: spin 1s linear infinite;
+    /* Minimal initial styling to prevent flash */
+    #app {
+      min-height: 100vh;
+      background-color: var(--sl-color-neutral-0);
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* Dark mode support for initial render */
+    html.sl-theme-dark #app {
+      background-color: var(--sl-color-neutral-900);
+      color: var(--sl-color-neutral-100);
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <div class="app-loading">
-      <div class="loading-fallback"></div>
-      <p>Loading Task Flow...</p>
-    </div>
+    <!-- No loading spinner - the app root will handle loading states -->
   </div>
   <script type="module" src="/src/main.ts"></script>
+   <script type="module">
+    import { inject } from '@vercel/analytics';
+    inject();
+  </script>
 </body>
 </html>
 

@@ -3,8 +3,6 @@ import { html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { BasePage } from '../base/base-page';
 import { supabase } from '../../services/supabase';
-import '../layout/app-sidebar';
-import '../common/error-message';
 
 interface TeamFormData {
   name: string;
@@ -19,61 +17,79 @@ interface TeamStats {
   tasks: number;
 }
 
+interface QuickAction {
+  title: string;
+  description: string;
+  icon: string;
+  path: string;
+  color: string;
+}
+
 @customElement('team-page')
-export class TeamPage extends BasePage {
+export class UpdatedTeamPage extends BasePage {
   static styles = css`
     ${BasePage.styles}
     
-    .page-title {
-      font-size: 1.5rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0 0 0.5rem 0;
+    /* Team settings specific styles */
+    .team-header-card {
+      background: linear-gradient(135deg, var(--sl-color-primary-50) 0%, var(--sl-color-primary-100) 100%);
+      border: 2px solid var(--sl-color-primary-200);
+      margin-bottom: 2rem;
     }
 
-    .page-subtitle {
-      color: var(--sl-color-neutral-600);
-      margin: 0;
-    }
-
-    .settings-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .settings-card {
-      border: none;
-      box-shadow: var(--sl-shadow-medium);
-    }
-
-    .card-header {
+    .team-avatar-section {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      gap: 1.5rem;
       margin-bottom: 1.5rem;
     }
 
-    .card-title-section {
+    .team-avatar {
+      width: 5rem;
+      height: 5rem;
+      border-radius: var(--sl-border-radius-large);
+      background: var(--sl-color-primary-600);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      font-weight: var(--sl-font-weight-bold);
+      flex-shrink: 0;
+      box-shadow: var(--sl-shadow-medium);
+    }
+
+    .team-info {
       flex: 1;
     }
 
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
+    .team-name-display {
+      font-size: 1.75rem;
+      font-weight: var(--sl-font-weight-bold);
+      color: var(--sl-color-primary-800);
+      margin: 0 0 0.25rem 0;
+    }
+
+    .team-slug {
+      color: var(--sl-color-primary-600);
+      font-size: var(--sl-font-size-medium);
       margin: 0 0 0.5rem 0;
+      font-family: var(--sl-font-mono);
+      font-weight: var(--sl-font-weight-medium);
+    }
+
+    .team-meta {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      font-size: var(--sl-font-size-small);
+      color: var(--sl-color-neutral-600);
+    }
+
+    .meta-item {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-    }
-
-    .card-description {
-      color: var(--sl-color-neutral-600);
-      font-size: var(--sl-font-size-small);
-      margin: 0;
     }
 
     .form-section {
@@ -82,13 +98,6 @@ export class TeamPage extends BasePage {
 
     .form-section:last-child {
       margin-bottom: 0;
-    }
-
-    .section-title {
-      font-size: 1rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-neutral-900);
-      margin: 0 0 1rem 0;
     }
 
     .form-grid {
@@ -105,129 +114,46 @@ export class TeamPage extends BasePage {
       border-top: 1px solid var(--sl-color-neutral-200);
     }
 
-    .team-avatar-section {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-      padding: 1.5rem;
-      background: var(--sl-color-primary-50);
-      border-radius: var(--sl-border-radius-large);
-      border: 1px solid var(--sl-color-primary-200);
-    }
-
-    .team-avatar {
-      width: 5rem;
-      height: 5rem;
-      border-radius: var(--sl-border-radius-large);
-      background: var(--sl-color-primary-600);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      font-weight: var(--sl-font-weight-bold);
-      flex-shrink: 0;
-    }
-
-    .avatar-info {
-      flex: 1;
-    }
-
-    .team-name-display {
-      font-size: 1.5rem;
-      font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-primary-800);
-      margin: 0 0 0.25rem 0;
-    }
-
-    .team-slug {
-      color: var(--sl-color-primary-600);
-      font-size: var(--sl-font-size-small);
-      margin: 0 0 0.5rem 0;
-      font-family: var(--sl-font-mono);
-    }
-
-    .team-created {
-      color: var(--sl-color-neutral-600);
-      font-size: var(--sl-font-size-small);
-      margin: 0;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-item {
-      text-align: center;
-      padding: 1.5rem;
-      background: var(--sl-color-neutral-50);
-      border: 1px solid var(--sl-color-neutral-200);
-      border-radius: var(--sl-border-radius-medium);
-      transition: all 0.2s ease;
-    }
-
-    .stat-item:hover {
-      background: var(--sl-color-neutral-100);
-      border-color: var(--sl-color-primary-300);
-    }
-
-    .stat-value {
-      font-size: 2rem;
-      font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-primary-600);
-      margin: 0 0 0.25rem 0;
-    }
-
-    .stat-label {
-      color: var(--sl-color-neutral-600);
-      font-size: var(--sl-font-size-small);
-      margin: 0;
-      font-weight: var(--sl-font-weight-medium);
-    }
-
     .quick-actions-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1rem;
     }
 
-    .action-link {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem;
+    .action-card {
       border: 1px solid var(--sl-color-neutral-200);
-      border-radius: var(--sl-border-radius-medium);
-      text-decoration: none;
-      color: var(--sl-color-neutral-700);
+      border-radius: var(--sl-border-radius-large);
+      padding: 1.5rem;
+      background: var(--sl-color-neutral-0);
       transition: all 0.2s ease;
-      background: var(--sl-color-neutral-50);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
     }
 
-    .action-link:hover {
-      background: var(--sl-color-primary-50);
+    .action-card:hover {
       border-color: var(--sl-color-primary-300);
-      color: var(--sl-color-primary-700);
-      transform: translateY(-1px);
+      box-shadow: var(--sl-shadow-medium);
+      transform: translateY(-2px);
+    }
+
+    .action-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
 
     .action-icon {
-      font-size: 1.25rem;
-      width: 2rem;
-      height: 2rem;
+      width: 3rem;
+      height: 3rem;
+      border-radius: var(--sl-border-radius-medium);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--sl-color-neutral-100);
-      border-radius: var(--sl-border-radius-small);
-    }
-
-    .action-link:hover .action-icon {
-      background: var(--sl-color-primary-100);
+      font-size: 1.5rem;
+      flex-shrink: 0;
     }
 
     .action-content {
@@ -235,61 +161,32 @@ export class TeamPage extends BasePage {
     }
 
     .action-title {
-      font-weight: var(--sl-font-weight-medium);
-      margin: 0 0 0.25rem 0;
+      font-size: 1.125rem;
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-neutral-900);
+      margin: 0 0 0.5rem 0;
     }
 
     .action-description {
-      font-size: var(--sl-font-size-small);
       color: var(--sl-color-neutral-600);
-      margin: 0;
-    }
-
-    .danger-zone {
-      border: 2px solid var(--sl-color-danger-200);
-      border-radius: var(--sl-border-radius-large);
-      padding: 2rem;
-      background: var(--sl-color-danger-50);
-      margin-top: 1rem;
-    }
-
-    .danger-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .danger-icon {
-      font-size: 1.5rem;
-      color: var(--sl-color-danger-600);
-    }
-
-    .danger-title {
-      font-size: 1.125rem;
-      font-weight: var(--sl-font-weight-semibold);
-      color: var(--sl-color-danger-700);
-      margin: 0;
-    }
-
-    .danger-description {
-      color: var(--sl-color-danger-600);
       font-size: var(--sl-font-size-small);
-      margin: 0 0 1.5rem 0;
-      line-height: 1.5;
+      margin: 0;
+      line-height: 1.4;
     }
 
-    .danger-actions {
-      display: flex;
-      gap: 1rem;
+    .readonly-section {
+      background: var(--sl-color-neutral-50);
+      border-radius: var(--sl-border-radius-medium);
+      padding: 1.5rem;
+      border: 1px solid var(--sl-color-neutral-200);
     }
 
-    .readonly-info {
+    .readonly-grid {
       display: grid;
       gap: 1rem;
     }
 
-    .info-item {
+    .readonly-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -297,82 +194,115 @@ export class TeamPage extends BasePage {
       border-bottom: 1px solid var(--sl-color-neutral-200);
     }
 
-    .info-item:last-child {
+    .readonly-item:last-child {
       border-bottom: none;
     }
 
-    .info-label {
+    .readonly-label {
       font-weight: var(--sl-font-weight-medium);
       color: var(--sl-color-neutral-600);
     }
 
-    .info-value {
+    .readonly-value {
       color: var(--sl-color-neutral-900);
       font-family: var(--sl-font-mono);
       font-size: var(--sl-font-size-small);
+      background: var(--sl-color-neutral-100);
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--sl-border-radius-small);
     }
 
-    .notification-area {
+    .danger-zone {
+      border: 2px solid var(--sl-color-danger-200);
+      border-radius: var(--sl-border-radius-large);
+      padding: 2rem;
+      background: var(--sl-color-danger-50);
+    }
+
+    .danger-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .danger-icon {
+      font-size: 2rem;
+      color: var(--sl-color-danger-600);
+    }
+
+    .danger-title {
+      font-size: 1.25rem;
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-danger-700);
+      margin: 0;
+    }
+
+    .danger-description {
+      color: var(--sl-color-danger-600);
+      margin: 0 0 1.5rem 0;
+      line-height: 1.5;
+    }
+
+    .danger-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .notification-container {
       position: fixed;
       top: 1rem;
       right: 1rem;
       z-index: 1000;
+      display: grid;
+      gap: 0.5rem;
       max-width: 400px;
     }
 
     /* Mobile responsive */
     @media (max-width: 768px) {
-      .settings-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-
-      .form-actions {
+      .team-avatar-section {
         flex-direction: column;
+        text-align: center;
+        align-items: center;
       }
 
-      .stats-grid {
-        grid-template-columns: 1fr;
+      .team-meta {
+        justify-content: center;
+        gap: 1rem;
       }
 
       .quick-actions-grid {
         grid-template-columns: 1fr;
       }
 
-      .team-avatar-section {
-        flex-direction: column;
-        text-align: center;
-      }
-
+      .form-actions,
       .danger-actions {
         flex-direction: column;
+      }
+
+      .form-actions sl-button,
+      .danger-actions sl-button {
+        width: 100%;
+      }
+
+      .readonly-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .readonly-value {
+        width: 100%;
+        text-align: left;
       }
     }
 
     /* Dark theme */
-    :host(.sl-theme-dark) .page-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .page-subtitle {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .card-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .card-description {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .section-title {
-      color: var(--sl-color-neutral-100);
-    }
-
-    :host(.sl-theme-dark) .team-avatar-section {
-      background: var(--sl-color-primary-900);
-      border-color: var(--sl-color-primary-700);
+    :host(.sl-theme-dark) .team-header-card {
+      background: linear-gradient(135deg, var(--sl-color-primary-900) 0%, var(--sl-color-primary-800) 100%);
+      border-color: var(--sl-color-primary-600);
     }
 
     :host(.sl-theme-dark) .team-name-display {
@@ -383,46 +313,43 @@ export class TeamPage extends BasePage {
       color: var(--sl-color-primary-400);
     }
 
-    :host(.sl-theme-dark) .team-created {
+    :host(.sl-theme-dark) .team-meta {
       color: var(--sl-color-neutral-400);
     }
 
-    :host(.sl-theme-dark) .stat-item {
+    :host(.sl-theme-dark) .action-card {
       background: var(--sl-color-neutral-800);
       border-color: var(--sl-color-neutral-700);
     }
 
-    :host(.sl-theme-dark) .stat-item:hover {
-      background: var(--sl-color-neutral-700);
+    :host(.sl-theme-dark) .action-card:hover {
       border-color: var(--sl-color-primary-600);
     }
 
-    :host(.sl-theme-dark) .stat-label {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .action-link {
-      background: var(--sl-color-neutral-800);
-      border-color: var(--sl-color-neutral-700);
-      color: var(--sl-color-neutral-300);
-    }
-
-    :host(.sl-theme-dark) .action-link:hover {
-      background: var(--sl-color-primary-900);
-      border-color: var(--sl-color-primary-600);
-      color: var(--sl-color-primary-300);
-    }
-
-    :host(.sl-theme-dark) .action-icon {
-      background: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .action-link:hover .action-icon {
-      background: var(--sl-color-primary-800);
+    :host(.sl-theme-dark) .action-title {
+      color: var(--sl-color-neutral-100);
     }
 
     :host(.sl-theme-dark) .action-description {
-      color: var(--sl-color-neutral-500);
+      color: var(--sl-color-neutral-400);
+    }
+
+    :host(.sl-theme-dark) .readonly-section {
+      background: var(--sl-color-neutral-800);
+      border-color: var(--sl-color-neutral-700);
+    }
+
+    :host(.sl-theme-dark) .readonly-item {
+      border-bottom-color: var(--sl-color-neutral-700);
+    }
+
+    :host(.sl-theme-dark) .readonly-label {
+      color: var(--sl-color-neutral-400);
+    }
+
+    :host(.sl-theme-dark) .readonly-value {
+      color: var(--sl-color-neutral-200);
+      background: var(--sl-color-neutral-700);
     }
 
     :host(.sl-theme-dark) .danger-zone {
@@ -442,18 +369,6 @@ export class TeamPage extends BasePage {
       color: var(--sl-color-danger-400);
     }
 
-    :host(.sl-theme-dark) .info-item {
-      border-bottom-color: var(--sl-color-neutral-700);
-    }
-
-    :host(.sl-theme-dark) .info-label {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .info-value {
-      color: var(--sl-color-neutral-200);
-    }
-
     :host(.sl-theme-dark) .form-actions {
       border-top-color: var(--sl-color-neutral-700);
     }
@@ -465,392 +380,111 @@ export class TeamPage extends BasePage {
     email: '',
   };
   @state() private isSubmitting = false;
-  @state() private notification: { type: 'success' | 'error'; message: string } | null = null;
+  @state() private notifications: Array<{ type: 'success' | 'error'; message: string; id: string }> = [];
   @state() private teamStats: TeamStats = { members: 1, projects: 0, scopes: 0, tasks: 0 };
+  @state() private isDeletingTeam = false;
 
-  connectedCallback() {
+  // Convert quickActions to a getter to avoid referencing this.teamSlug before it's available
+  private get quickActions(): QuickAction[] {
+    const slug = this.currentAccount?.slug || '';
+    return [
+      {
+        title: 'Team Members',
+        description: 'Invite and manage team members, assign roles and permissions',
+        icon: '👥',
+        path: `/app/${slug}/team/members`,
+        color: 'var(--sl-color-primary-100)'
+      },
+      {
+        title: 'Billing & Subscription',
+        description: 'Manage your subscription, payment methods and billing history',
+        icon: '💳',
+        path: `/app/${slug}/billing`,
+        color: 'var(--sl-color-success-100)'
+      },
+      {
+        title: 'Data Settings',
+        description: 'Configure labels, categories, types and other data organization tools',
+        icon: '⚙️',
+        path: `/app/${slug}/data-settings`,
+        color: 'var(--sl-color-warning-100)'
+      },
+      {
+        title: 'Scopes & Projects',
+        description: 'Create and manage project scopes, organize work and track progress',
+        icon: '🎯',
+        path: `/app/${slug}/scopes`,
+        color: 'var(--sl-color-neutral-100)'
+      }
+    ];
+  }
+
+  async connectedCallback() {
     super.connectedCallback();
-    this.loadTeamData();
-    this.loadTeamStats();
+    await this.loadPageData();
   }
 
-  updated(changedProperties: Map<string, any>) {
-    if (changedProperties.has('context')) {
-      this.loadTeamData();
-      this.loadTeamStats();
-    }
+  protected async loadPageData(): Promise<void> {
+    await this.withPageLoading(async () => {
+      if (!this.currentAccount) {
+        this.pageError = 'No team account found';
+        return;
+      }
+
+      // Load team data
+      this.formData = {
+        name: this.currentAccount.name || '',
+        description: this.currentAccount.account_info?.description || '',
+        email: this.currentAccount.email || '',
+      };
+
+      // Load team stats - in real app this would come from API
+      await new Promise(resolve => setTimeout(resolve, 300));
+      this.teamStats = {
+        members: 1,
+        projects: 0,
+        scopes: 0,
+        tasks: 0
+      };
+    });
   }
 
-  private loadTeamData() {
+  private updateFormData(key: keyof TeamFormData, value: string) {
+    this.formData = { ...this.formData, [key]: value };
+  }
+
+  private resetForm() {
     if (this.currentAccount) {
       this.formData = {
         name: this.currentAccount.name || '',
         description: this.currentAccount.account_info?.description || '',
         email: this.currentAccount.email || '',
       };
+      this.showNotification('success', 'Form reset to current values');
     }
-  }
-
-  private async loadTeamStats() {
-    // TODO: Load actual stats from API
-    // For now, using placeholder data
-    this.teamStats = {
-      members: 1,
-      projects: 0,
-      scopes: 0,
-      tasks: 0
-    };
-  }
-
-  render() {
-    if (!this.currentAccount) {
-      return html`
-        <div class="page-layout">
-          <app-sidebar 
-            .stateController=${this.stateController}
-            .routerController=${this.routerController}
-            .themeController=${this.themeController}
-            .currentTeamSlug=${this.teamSlug}
-          ></app-sidebar>
-          <div class="main-content">
-            <div class="page-content">
-              <error-message 
-                title="Team Not Found"
-                message="The requested team could not be found or you don't have access to it."
-                .showRetry=${false}
-              >
-                <sl-button slot="actions" variant="primary" @click=${() => this.routerController.goToDashboard()}>
-                  <sl-icon slot="prefix" name="house"></sl-icon>
-                  Go to Dashboard
-                </sl-button>
-              </error-message>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    return html`
-      <div class="page-layout">
-        <app-sidebar 
-          .stateController=${this.stateController}
-          .routerController=${this.routerController}
-          .themeController=${this.themeController}
-          .currentTeamSlug=${this.teamSlug}
-        ></app-sidebar>
-        
-        <div class="main-content">
-          <div class="page-header">
-            <h1 class="page-title">Team Settings</h1>
-            <p class="page-subtitle">Manage your team configuration and preferences</p>
-          </div>
-
-          <div class="page-content">
-            <div class="settings-grid">
-              ${this.renderGeneralSettingsCard()}
-              ${this.renderQuickActionsCard()}
-              ${this.renderTeamOverviewCard()}
-              ${this.renderDangerZoneCard()}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${this.renderNotifications()}
-    `;
-  }
-
-  private renderGeneralSettingsCard() {
-    return html`
-      <sl-card class="settings-card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <h2 class="card-title">
-              <sl-icon name="gear"></sl-icon>
-              General Settings
-            </h2>
-            <p class="card-description">Basic team information and configuration</p>
-          </div>
-        </div>
-
-        <form @submit=${this.handleGeneralSubmit}>
-          <div class="form-section">
-            <h3 class="section-title">Team Information</h3>
-            <div class="form-grid">
-              <sl-input
-                label="Team Name"
-                .value=${this.formData.name}
-                @sl-input=${(e: CustomEvent) => this.updateFormData('name', (e.target as any).value)}
-                required
-                help-text="This name will be visible to all team members"
-              >
-                <sl-icon slot="prefix" name="building"></sl-icon>
-              </sl-input>
-
-              <sl-input
-                label="Team Email"
-                type="email"
-                .value=${this.formData.email}
-                @sl-input=${(e: CustomEvent) => this.updateFormData('email', (e.target as any).value)}
-                help-text="Public email for team communications"
-              >
-                <sl-icon slot="prefix" name="envelope"></sl-icon>
-              </sl-input>
-
-              <sl-textarea
-                label="Description"
-                .value=${this.formData.description}
-                @sl-input=${(e: CustomEvent) => this.updateFormData('description', (e.target as any).value)}
-                rows="3"
-                help-text="Brief description of your team's purpose (optional)"
-                placeholder="Describe what your team does..."
-              ></sl-textarea>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <sl-button variant="default" @click=${this.resetForm}>
-              <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
-              Reset
-            </sl-button>
-            <sl-button 
-              type="submit"
-              variant="primary" 
-              ?loading=${this.isSubmitting}
-            >
-              <sl-icon slot="prefix" name="check"></sl-icon>
-              Save Changes
-            </sl-button>
-          </div>
-        </form>
-      </sl-card>
-    `;
-  }
-
-  private renderTeamOverviewCard() {
-    return html`
-      <sl-card class="settings-card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <h2 class="card-title">
-              <sl-icon name="info-circle"></sl-icon>
-              Team Overview
-            </h2>
-            <p class="card-description">Current team status and information</p>
-          </div>
-        </div>
-
-        <div class="team-avatar-section">
-          <div class="team-avatar">
-            ${this.stateController.state.currentAccount?.name?.charAt(0).toUpperCase() || 'T'}
-          </div>
-          <div class="avatar-info">
-            <h3 class="team-name-display">${this.stateController.state.currentAccount?.name}</h3>
-            <p class="team-slug">@${this.stateController.state.currentAccount?.slug}</p>
-            <p class="team-created">
-              Created ${new Date(this.stateController.state.currentAccount?.created_at ?? '').toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-value">${this.teamStats.members}</div>
-            <div class="stat-label">Members</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${this.teamStats.projects}</div>
-            <div class="stat-label">Projects</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${this.teamStats.scopes}</div>
-            <div class="stat-label">Scopes</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${this.teamStats.tasks}</div>
-            <div class="stat-label">Tasks</div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3 class="section-title">Technical Details</h3>
-          <div class="readonly-info">
-            <div class="info-item">
-              <span class="info-label">Team ID</span>
-              <span class="info-value">${this.stateController.state.currentAccount?.id}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Account Type</span>
-              <span class="info-value">${this.stateController.state.currentAccount?.account_type}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Last Updated</span>
-              <span class="info-value">${new Date(this.stateController.state.currentAccount?.updated_at ?? '').toLocaleDateString()}</span>
-            </div>
-          </div>
-        </div>
-      </sl-card>
-    `;
-  }
-
-  private renderQuickActionsCard() {
-    return html`
-      <sl-card class="settings-card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <h2 class="card-title">
-              <sl-icon name="lightning"></sl-icon>
-              Quick Actions
-            </h2>
-            <p class="card-description">Common team management tasks</p>
-          </div>
-        </div>
-
-        <div class="quick-actions-grid">
-          <a 
-            class="action-link" 
-            href="/app/${this.teamSlug}/team/members"
-          >
-            <div class="action-icon">👥</div>
-            <div class="action-content">
-              <div class="action-title">Manage Members</div>
-              <div class="action-description">Invite and manage team members</div>
-            </div>
-            <sl-icon name="arrow-right"></sl-icon>
-          </a>
-          
-          <a 
-            class="action-link" 
-            href="/app/${this.teamSlug}/billing"
-          >
-            <div class="action-icon">💳</div>
-            <div class="action-content">
-              <div class="action-title">Billing & Plans</div>
-              <div class="action-description">Manage subscription and billing</div>
-            </div>
-            <sl-icon name="arrow-right"></sl-icon>
-          </a>
-          
-          <a 
-            class="action-link" 
-            href="/app/${this.teamSlug}/data-settings"
-          >
-            <div class="action-icon">⚙️</div>
-            <div class="action-content">
-              <div class="action-title">Data Settings</div>
-              <div class="action-description">Configure labels, categories & types</div>
-            </div>
-            <sl-icon name="arrow-right"></sl-icon>
-          </a>
-          
-          <a 
-            class="action-link" 
-            href="/app/${this.teamSlug}/scopes"
-          >
-            <div class="action-icon">🎯</div>
-            <div class="action-content">
-              <div class="action-title">Manage Scopes</div>
-              <div class="action-description">Create and organize project scopes</div>
-            </div>
-            <sl-icon name="arrow-right"></sl-icon>
-          </a>
-        </div>
-      </sl-card>
-    `;
-  }
-
-  private renderDangerZoneCard() {
-    return html`
-      <sl-card class="settings-card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <h2 class="card-title">
-              <sl-icon name="exclamation-triangle"></sl-icon>
-              Danger Zone
-            </h2>
-            <p class="card-description">Irreversible and destructive actions</p>
-          </div>
-        </div>
-
-        <div class="danger-zone">
-          <div class="danger-header">
-            <div class="danger-icon">⚠️</div>
-            <h3 class="danger-title">Delete Team</h3>
-          </div>
-          <p class="danger-description">
-            Permanently delete this team and all associated data including projects, tasks, scopes, and member access. 
-            This action cannot be undone and will immediately revoke access for all team members.
-          </p>
-          
-          <sl-alert variant="warning" open>
-            <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-            <strong>Warning:</strong> This will permanently delete all team data including:
-            <ul style="margin: 0.5rem 0 0 1rem; padding: 0;">
-              <li>All projects and scopes</li>
-              <li>All tasks and documents</li>
-              <li>Team member access</li>
-              <li>Billing and subscription data</li>
-            </ul>
-          </sl-alert>
-
-          <div class="danger-actions">
-            <sl-button variant="danger" @click=${this.handleDeleteTeam}>
-              <sl-icon slot="prefix" name="trash"></sl-icon>
-              Delete Team Permanently
-            </sl-button>
-            <sl-button variant="default" @click=${this.handleExportData}>
-              <sl-icon slot="prefix" name="download"></sl-icon>
-              Export Data First
-            </sl-button>
-          </div>
-        </div>
-      </sl-card>
-    `;
-  }
-
-  private renderNotifications() {
-    if (!this.notification) return '';
-
-    return html`
-      <div class="notification-area">
-        <sl-alert 
-          variant=${this.notification.type} 
-          open 
-          closable
-          @sl-hide=${() => this.notification = null}
-        >
-          <sl-icon 
-            slot="icon" 
-            name=${this.notification.type === 'success' ? 'check-circle' : 'exclamation-triangle'}
-          ></sl-icon>
-          ${this.notification.message}
-        </sl-alert>
-      </div>
-    `;
-  }
-
-  // Helper methods
-  private updateFormData(key: keyof TeamFormData, value: string) {
-    this.formData = { ...this.formData, [key]: value };
-  }
-
-  private resetForm() {
-    this.loadTeamData();
-    this.showNotification('success', 'Form reset to current values');
   }
 
   private showNotification(type: 'success' | 'error', message: string) {
-    this.notification = { type, message };
+    const notification = {
+      type,
+      message,
+      id: crypto.randomUUID()
+    };
+    
+    this.notifications = [...this.notifications, notification];
     
     // Auto-hide success notifications
     if (type === 'success') {
       setTimeout(() => {
-        this.notification = null;
+        this.removeNotification(notification.id);
       }, 3000);
     }
   }
 
-  // Event handlers
+  private removeNotification(id: string) {
+    this.notifications = this.notifications.filter(n => n.id !== id);
+  }
+
   private async handleGeneralSubmit(event: Event) {
     event.preventDefault();
     
@@ -886,6 +520,10 @@ export class TeamPage extends BasePage {
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  private handleQuickAction(action: QuickAction) {
+    this.routerController.navigate(action.path);
   }
 
   private async handleDeleteTeam() {
@@ -925,20 +563,20 @@ export class TeamPage extends BasePage {
     
     if (!finalConfirm) return;
 
+    this.isDeletingTeam = true;
+
     try {
       // TODO: Implement actual team deletion
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       // For now, show a message that it's not implemented
       this.showNotification('error', 'Team deletion is not implemented yet. Please contact support to delete your team.');
-      
-      // In a real implementation, you would:
-      // 1. Call the delete API
-      // 2. Handle the response
-      // 3. Redirect to dashboard or sign out
-      // 4. Show appropriate messages
       
     } catch (error) {
       console.error('Failed to delete team:', error);
       this.showNotification('error', 'Failed to delete team. Please contact support.');
+    } finally {
+      this.isDeletingTeam = false;
     }
   }
 
@@ -946,4 +584,267 @@ export class TeamPage extends BasePage {
     // TODO: Implement data export functionality
     this.showNotification('success', 'Data export feature coming soon! Contact support for manual export.');
   }
+
+  protected renderPageContent() {
+    if (this.pageError) {
+      return this.renderError(this.pageError, () => this.refreshPageData());
+    }
+
+    if (this.isLoading) {
+      return this.renderLoading('Loading team settings...');
+    }
+
+    if (!this.currentAccount) {
+      return this.renderError('Team not found or you don\'t have access to it.');
+    }
+
+    const teamStats = [
+      { label: 'Team Members', value: this.teamStats.members, icon: 'people' },
+      { label: 'Active Projects', value: this.teamStats.projects, icon: 'collection' },
+      { label: 'Total Scopes', value: this.teamStats.scopes, icon: 'folder' },
+      { label: 'Completed Tasks', value: this.teamStats.tasks, icon: 'check-circle' }
+    ];
+
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? '-' : d.toISOString();
+    };
+
+    return html`
+      ${this.renderPageHeader(
+        'Team Settings',
+        'Manage your team configuration, members, and preferences'
+      )}
+
+      <div class="page-content">
+        ${this.renderStats(teamStats)}
+
+        <!-- Team Overview Card -->
+        <div class="content-section">
+          <div class="content-card team-header-card">
+            <div class="team-avatar-section">
+              <div class="team-avatar">
+                ${this.currentAccount.name?.charAt(0).toUpperCase() || 'T'}
+              </div>
+              <div class="team-info">
+                <h2 class="team-name-display">${this.currentAccount.name}</h2>
+                <p class="team-slug">@${this.currentAccount.slug}</p>
+                <div class="team-meta">
+                  <div class="meta-item">
+                    <sl-icon name="calendar"></sl-icon>
+                    Created ${new Date(this.currentAccount.created_at ?? '').toLocaleDateString()}
+                  </div>
+                  <div class="meta-item">
+                    <sl-icon name="gear"></sl-icon>
+                    ${this.currentAccount.account_type}
+                  </div>
+                  <div class="meta-item">
+                    <sl-icon name="clock"></sl-icon>
+                    Updated ${new Date(this.currentAccount.updated_at ?? '').toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid cols-1">
+          <!-- General Settings -->
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'General Settings',
+              'Basic team information and configuration'
+            )}
+            
+            <div class="content-card">
+              <form @submit=${this.handleGeneralSubmit}>
+                <div class="form-section">
+                  <div class="form-grid">
+                    <sl-input
+                      label="Team Name"
+                      .value=${this.formData.name}
+                      @sl-input=${(e: CustomEvent) => this.updateFormData('name', (e.target as any).value)}
+                      required
+                      help-text="This name will be visible to all team members"
+                    >
+                      <sl-icon slot="prefix" name="building"></sl-icon>
+                    </sl-input>
+
+                    <sl-input
+                      label="Team Email"
+                      type="email"
+                      .value=${this.formData.email}
+                      @sl-input=${(e: CustomEvent) => this.updateFormData('email', (e.target as any).value)}
+                      help-text="Public email for team communications"
+                    >
+                      <sl-icon slot="prefix" name="envelope"></sl-icon>
+                    </sl-input>
+
+                    <sl-textarea
+                      label="Description"
+                      .value=${this.formData.description}
+                      @sl-input=${(e: CustomEvent) => this.updateFormData('description', (e.target as any).value)}
+                      rows="3"
+                      help-text="Brief description of your team's purpose (optional)"
+                      placeholder="Describe what your team does..."
+                    ></sl-textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <sl-button variant="default" @click=${this.resetForm} type="button">
+                    <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                    Reset
+                  </sl-button>
+                  <sl-button 
+                    type="submit"
+                    variant="primary" 
+                    ?loading=${this.isSubmitting}
+                  >
+                    <sl-icon slot="prefix" name="check"></sl-icon>
+                    Save Changes
+                  </sl-button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'Quick Actions',
+              'Common team management tasks'
+            )}
+            
+            <div class="quick-actions-grid">
+              ${this.quickActions.map(action => html`
+                <a 
+                  class="action-card" 
+                  href="#"
+                  @click=${(e: Event) => {
+                    e.preventDefault();
+                    this.handleQuickAction(action);
+                  }}
+                >
+                  <div class="action-header">
+                    <div class="action-icon" style="background-color: ${action.color}">
+                      ${action.icon}
+                    </div>
+                    <div class="action-content">
+                      <div class="action-title">${action.title}</div>
+                      <div class="action-description">${action.description}</div>
+                    </div>
+                    <sl-icon name="arrow-right"></sl-icon>
+                  </div>
+                </a>
+              `)}
+            </div>
+          </div>
+
+          <!-- Technical Details -->
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'Technical Details',
+              'Read-only team information and identifiers'
+            )}
+            
+            <div class="readonly-section">
+              <div class="readonly-grid">
+                <div class="readonly-item">
+                  <span class="readonly-label">Team ID</span>
+                  <span class="readonly-value">${this.currentAccount.id}</span>
+                </div>
+                <div class="readonly-item">
+                  <span class="readonly-label">Account Type</span>
+                  <span class="readonly-value">${this.currentAccount.account_type}</span>
+                </div>
+                <div class="readonly-item">
+                  <span class="readonly-label">Slug</span>
+                  <span class="readonly-value">${this.currentAccount.slug}</span>
+                </div>
+                <div class="readonly-item">
+                  <span class="readonly-label">Created</span>
+                  <span class="readonly-value">${formatDate(this.currentAccount.created_at)}</span>
+                </div>
+                <div class="readonly-item">
+                  <span class="readonly-label">Last Updated</span>
+                  <span class="readonly-value">${formatDate(this.currentAccount.updated_at)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="content-section">
+            ${this.renderSectionHeader(
+              'Danger Zone',
+              'Irreversible and destructive actions'
+            )}
+            
+            <div class="danger-zone">
+              <div class="danger-header">
+                <div class="danger-icon">⚠️</div>
+                <h3 class="danger-title">Delete Team</h3>
+              </div>
+              <p class="danger-description">
+                Permanently delete this team and all associated data including projects, tasks, scopes, and member access. 
+                This action cannot be undone and will immediately revoke access for all team members.
+              </p>
+              
+              <sl-alert variant="warning" open style="margin-bottom: 1.5rem;">
+                <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+                <strong>Warning:</strong> This will permanently delete all team data including:
+                <ul style="margin: 0.5rem 0 0 1rem; padding: 0;">
+                  <li>All projects and scopes</li>
+                  <li>All tasks and documents</li>
+                  <li>Team member access</li>
+                  <li>Billing and subscription data</li>
+                </ul>
+              </sl-alert>
+
+              <div class="danger-actions">
+                <sl-button 
+                  variant="danger" 
+                  @click=${this.handleDeleteTeam}
+                  ?loading=${this.isDeletingTeam}
+                >
+                  <sl-icon slot="prefix" name="trash"></sl-icon>
+                  Delete Team Permanently
+                </sl-button>
+                <sl-button variant="default" @click=${this.handleExportData}>
+                  <sl-icon slot="prefix" name="download"></sl-icon>
+                  Export Data First
+                </sl-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${this.renderNotifications()}
+    `;
+  }
+
+  private renderNotifications() {
+    return html`
+      <div class="notification-container">
+        ${this.notifications.map(notification => html`
+          <sl-alert 
+            variant=${notification.type} 
+            open 
+            closable
+            @sl-hide=${() => this.removeNotification(notification.id)}
+          >
+            <sl-icon 
+              slot="icon" 
+              name=${notification.type === 'success' ? 'check-circle' : 'exclamation-triangle'}
+            ></sl-icon>
+            ${notification.message}
+          </sl-alert>
+        `)}
+      </div>
+    `;
+  }
 }
+
