@@ -3,73 +3,25 @@ import { html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { BasePage } from '../base/base-page';
 import { Group, Label, Category, Type } from '../../types';
-
-// Mock services - replace with actual implementations
-class GroupService {
-  async getGroups(accountId: string) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { data: [], error: null };
-  }
-  async createGroup(data: any) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { data: { id: crypto.randomUUID(), ...data }, error: null };
-  }
-  async deleteGroup(id: string) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { error: null };
-  }
-}
-
-class LabelService {
-  async getLabels(accountId: string) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { data: [], error: null };
-  }
-  async createLabel(data: any) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { data: { id: crypto.randomUUID(), ...data }, error: null };
-  }
-  async deleteLabel(id: string) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { error: null };
-  }
-}
-
-class CategoryService {
-  async getCategories(accountId: string) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { data: [], error: null };
-  }
-  async createCategory(data: any) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { data: { id: crypto.randomUUID(), ...data }, error: null };
-  }
-  async deleteCategory(id: string) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { error: null };
-  }
-}
-
-class TypeService {
-  async getTypes(accountId: string) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { data: [], error: null };
-  }
-  async createType(data: any) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { data: { id: crypto.randomUUID(), ...data }, error: null };
-  }
-  async deleteType(id: string) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { error: null };
-  }
-}
+import { GroupService, LabelService, CategoryService, TypeService } from '../../services';
 
 interface FormData {
   groups: { name: string };
   labels: { name: string; color: string };
   categories: { name: string; color: string };
   types: { name: string; color: string };
+}
+
+interface EditState {
+  isOpen: boolean;
+  type: 'group' | 'label' | 'category' | 'type' | null;
+  item: any;
+}
+
+interface DeleteState {
+  isOpen: boolean;
+  type: 'group' | 'label' | 'category' | 'type' | null;
+  item: any;
 }
 
 @customElement('data-settings-page')
@@ -181,6 +133,65 @@ export class UpdatedDataSettingsPage extends BasePage {
       pointer-events: none;
     }
 
+    /* Modal styles */
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: var(--sl-font-weight-semibold);
+    }
+
+    .modal-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .form-grid.two-col {
+      grid-template-columns: 1fr auto;
+      align-items: end;
+    }
+
+    /* Delete confirmation styles */
+    .delete-content {
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .delete-icon {
+      font-size: 3rem;
+      color: var(--sl-color-danger-500);
+      margin-bottom: 1rem;
+    }
+
+    .delete-title {
+      font-size: 1.25rem;
+      font-weight: var(--sl-font-weight-semibold);
+      margin-bottom: 0.5rem;
+      color: var(--sl-color-neutral-900);
+    }
+
+    .delete-message {
+      color: var(--sl-color-neutral-600);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .item-name-highlight {
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-neutral-900);
+    }
+
     /* Mobile responsive */
     @media (max-width: 768px) {
       .settings-grid {
@@ -248,6 +259,18 @@ export class UpdatedDataSettingsPage extends BasePage {
     types: { name: '', color: '#f59e0b' }
   };
 
+  @state() private editState: EditState = {
+    isOpen: false,
+    type: null,
+    item: null
+  };
+
+  @state() private deleteState: DeleteState = {
+    isOpen: false,
+    type: null,
+    item: null
+  };
+
   @state() private notifications: Array<{ type: 'success' | 'error'; message: string; id: string }> = [];
   @state() private loadingStates: Record<string, boolean> = {};
 
@@ -264,18 +287,51 @@ export class UpdatedDataSettingsPage extends BasePage {
 
       const accountId = this.currentAccount.id;
 
-      // Load all data in parallel
-      const [groupsData, labelsData, categoriesData, typesData] = await Promise.all([
-        this.groupService.getGroups(accountId),
-        this.labelService.getLabels(accountId),
-        this.categoryService.getCategories(accountId),
-        this.typeService.getTypes(accountId)
-      ]);
+      try {
+        // Load all data in parallel
+        const [groupsData, labelsData, categoriesData, typesData] = await Promise.all([
+          this.groupService.getGroups(accountId),
+          this.labelService.getLabels(accountId),
+          this.categoryService.getCategories(accountId),
+          this.typeService.getTypes(accountId)
+        ]);
 
-      if (groupsData?.data) this.groups = groupsData.data;
-      if (labelsData?.data) this.labels = labelsData.data;
-      if (categoriesData?.data) this.categories = categoriesData.data;
-      if (typesData?.data) this.types = typesData.data;
+        // Handle successful responses
+        if (groupsData?.data && !groupsData?.error) {
+          this.groups = groupsData.data;
+        } else if (groupsData?.error) {
+          console.error('Failed to load groups:', groupsData.error);
+        }
+
+        if (labelsData?.data && !labelsData?.error) {
+          this.labels = labelsData.data;
+        } else if (labelsData?.error) {
+          console.error('Failed to load labels:', labelsData.error);
+        }
+
+        if (categoriesData?.data && !categoriesData?.error) {
+          this.categories = categoriesData.data;
+        } else if (categoriesData?.error) {
+          console.error('Failed to load categories:', categoriesData.error);
+        }
+
+        if (typesData?.data && !typesData?.error) {
+          this.types = typesData.data;
+        } else if (typesData?.error) {
+          console.error('Failed to load types:', typesData.error);
+        }
+
+        console.log('[DataSettings] Data loaded:', {
+          groups: this.groups.length,
+          labels: this.labels.length,
+          categories: this.categories.length,
+          types: this.types.length
+        });
+
+      } catch (error) {
+        console.error('[DataSettings] Error loading data:', error);
+        throw new Error('Failed to load data settings');
+      }
     });
   }
 
@@ -312,6 +368,8 @@ export class UpdatedDataSettingsPage extends BasePage {
         </div>
       </div>
 
+      ${this.renderEditModal()}
+      ${this.renderDeleteModal()}
       ${this.renderNotifications()}
     `;
   }
@@ -606,6 +664,117 @@ export class UpdatedDataSettingsPage extends BasePage {
     `;
   }
 
+  private renderEditModal() {
+    if (!this.editState.isOpen || !this.editState.type || !this.editState.item) {
+      return html``;
+    }
+
+    const item = this.editState.item;
+    const type = this.editState.type;
+    const hasColor = type !== 'group';
+
+    return html`
+      <sl-dialog 
+        label="Edit ${type.charAt(0).toUpperCase() + type.slice(1)}"
+        ?open=${this.editState.isOpen}
+        @sl-hide=${this.closeEditModal}
+      >
+        <div class="modal-header">
+          <sl-icon name=${this.getTypeIcon(type)}></sl-icon>
+          <h3 class="modal-title">Edit ${type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+        </div>
+
+        <div class="modal-form">
+          <div class="form-grid ${hasColor ? 'two-col' : ''}">
+            <sl-input
+              label="${type.charAt(0).toUpperCase() + type.slice(1)} Name"
+              .value=${item.name}
+              @sl-input=${(e: CustomEvent) => this.updateEditForm('name', (e.target as any).value)}
+              @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.saveEdit()}
+            ></sl-input>
+            
+            ${hasColor ? html`
+              <sl-color-picker
+                label="Color"
+                .value=${item.color}
+                @sl-change=${(e: CustomEvent) => this.updateEditForm('color', (e.target as any).value)}
+                format="hex"
+                size="small"
+              ></sl-color-picker>
+            ` : ''}
+          </div>
+        </div>
+
+        <div slot="footer">
+          <sl-button variant="default" @click=${this.closeEditModal}>
+            Cancel
+          </sl-button>
+          <sl-button 
+            variant="primary" 
+            @click=${this.saveEdit}
+            ?disabled=${!item.name?.trim()}
+            ?loading=${this.loadingStates['edit-item']}
+          >
+            <sl-icon slot="prefix" name="check"></sl-icon>
+            Save Changes
+          </sl-button>
+        </div>
+      </sl-dialog>
+    `;
+  }
+
+  private renderDeleteModal() {
+    if (!this.deleteState.isOpen || !this.deleteState.type || !this.deleteState.item) {
+      return html``;
+    }
+
+    const item = this.deleteState.item;
+    const type = this.deleteState.type;
+
+    return html`
+      <sl-dialog 
+        label="Confirm Delete"
+        ?open=${this.deleteState.isOpen}
+        @sl-hide=${this.closeDeleteModal}
+      >
+        <div class="delete-content">
+          <sl-icon name="exclamation-triangle" class="delete-icon"></sl-icon>
+          <h3 class="delete-title">Delete ${type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+          <div class="delete-message">
+            Are you sure you want to delete 
+            <span class="item-name-highlight">"${item.name}"</span>?
+            <br><br>
+            This action cannot be undone and may affect existing scope items.
+          </div>
+        </div>
+
+        <div slot="footer">
+          <sl-button variant="default" @click=${this.closeDeleteModal}>
+            Cancel
+          </sl-button>
+          <sl-button 
+            variant="danger" 
+            @click=${this.confirmDelete}
+            ?loading=${this.loadingStates['delete-item']}
+          >
+            <sl-icon slot="prefix" name="trash"></sl-icon>
+            Delete ${type.charAt(0).toUpperCase() + type.slice(1)}
+          </sl-button>
+        </div>
+      </sl-dialog>
+    `;
+  }
+
+  private getTypeIcon(type: string): string {
+    switch (type) {
+      case 'group': return 'folder';
+      case 'label': return 'tag';
+      case 'category': return 'folder2';
+      case 'type': return 'lightning';
+      default: return 'gear';
+    }
+  }
+
   // Helper methods
   private updateFormData(section: keyof FormData, field: string, value: any) {
     this.formData = {
@@ -615,6 +784,18 @@ export class UpdatedDataSettingsPage extends BasePage {
         [field]: value
       }
     };
+  }
+
+  private updateEditForm(field: string, value: any) {
+    if (this.editState.item) {
+      this.editState = {
+        ...this.editState,
+        item: {
+          ...this.editState.item,
+          [field]: value
+        }
+      };
+    }
   }
 
   private showNotification(type: 'success' | 'error', message: string) {
@@ -661,6 +842,7 @@ export class UpdatedDataSettingsPage extends BasePage {
         throw new Error(result?.error || 'Failed to create group');
       }
     } catch (error) {
+      console.error('Error creating group:', error);
       this.showNotification('error', 'Failed to create group');
     } finally {
       this.setLoading('add-group', false);
@@ -678,7 +860,7 @@ export class UpdatedDataSettingsPage extends BasePage {
         color: this.formData.labels.color,
       });
 
-      if (result?.data && !result?.error) {
+if (result?.data && !result?.error) {
         this.labels = [...this.labels, result.data];
         this.formData = { ...this.formData, labels: { name: '', color: '#3b82f6' } };
         this.showNotification('success', 'Label created successfully');
@@ -686,6 +868,7 @@ export class UpdatedDataSettingsPage extends BasePage {
         throw new Error(result?.error || 'Failed to create label');
       }
     } catch (error) {
+      console.error('Error creating label:', error);
       this.showNotification('error', 'Failed to create label');
     } finally {
       this.setLoading('add-label', false);
@@ -711,6 +894,7 @@ export class UpdatedDataSettingsPage extends BasePage {
         throw new Error(result?.error || 'Failed to create category');
       }
     } catch (error) {
+      console.error('Error creating category:', error);
       this.showNotification('error', 'Failed to create category');
     } finally {
       this.setLoading('add-category', false);
@@ -736,6 +920,7 @@ export class UpdatedDataSettingsPage extends BasePage {
         throw new Error(result?.error || 'Failed to create type');
       }
     } catch (error) {
+      console.error('Error creating type:', error);
       this.showNotification('error', 'Failed to create type');
     } finally {
       this.setLoading('add-type', false);
@@ -743,18 +928,102 @@ export class UpdatedDataSettingsPage extends BasePage {
   }
 
   private editItem(type: string, item: any) {
-    // TODO: Implement edit functionality with modal or inline editing
-    console.log(`Edit ${type}:`, item);
-    this.showNotification('success', `Edit ${type} functionality coming soon!`);
+    this.editState = { 
+      isOpen: true, 
+      type: type as any, 
+      item: { ...item } // Create a copy to avoid mutating original
+    };
   }
 
-  private async deleteItem(type: string, item: any) {
-    if (!confirm(`Are you sure you want to delete "${item.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
+  private closeEditModal = () => {
+    this.editState = { isOpen: false, type: null, item: null };
+  }
 
-    const loadingKey = `delete-${type}`;
-    this.setLoading(loadingKey, true);
+  private deleteItem(type: string, item: any) {
+    this.deleteState = { 
+      isOpen: true, 
+      type: type as any, 
+      item 
+    };
+  }
+
+  private closeDeleteModal = () => {
+    this.deleteState = { isOpen: false, type: null, item: null };
+  }
+
+  private async saveEdit() {
+    if (!this.editState.item || !this.currentAccount?.id || !this.editState.type) return;
+
+    this.setLoading('edit-item', true);
+    try {
+      let result;
+
+      switch (this.editState.type) {
+        case 'group':
+          result = await this.groupService.updateGroup(this.editState.item.id, {
+            name: this.editState.item.name,
+          });
+          break;
+        case 'label':
+          result = await this.labelService.updateLabel(this.editState.item.id, {
+            name: this.editState.item.name,
+            color: this.editState.item.color,
+          });
+          break;
+        case 'category':
+          result = await this.categoryService.updateCategory(this.editState.item.id, {
+            name: this.editState.item.name,
+            color: this.editState.item.color,
+          });
+          break;
+        case 'type':
+          result = await this.typeService.updateType(this.editState.item.id, {
+            name: this.editState.item.name,
+            color: this.editState.item.color,
+          });
+          break;
+        default:
+          throw new Error('Unknown type');
+      }
+
+      if (result?.data && !result?.error) {
+        // Update local state
+        const updatedItem = result.data;
+        switch (this.editState.type) {
+          case 'group':
+            this.groups = this.groups.map(g => g.id === updatedItem.id ? updatedItem : g);
+            break;
+          case 'label':
+            this.labels = this.labels.map(l => l.id === updatedItem.id ? updatedItem : l) as Label[];
+            break;
+          case 'category':
+            this.categories = this.categories.map(c => c.id === updatedItem.id ? updatedItem : c) as Category[];
+            break;
+          case 'type':
+            this.types = this.types.map(t => t.id === updatedItem.id ? updatedItem : t) as Type[];
+            break;
+        }
+
+        this.showNotification('success', `${this.editState.type.charAt(0).toUpperCase() + this.editState.type.slice(1)} updated successfully`);
+        this.closeEditModal();
+      } else {
+        throw new Error(result?.error || 'Failed to update item');
+      }
+    } catch (error) {
+      console.error(`Error updating ${this.editState.type}:`, error);
+      this.showNotification('error', `Failed to update ${this.editState.type}`);
+    } finally {
+      this.setLoading('edit-item', false);
+    }
+  }
+
+  private async confirmDelete() {
+    if (!this.deleteState.item || !this.deleteState.type) return;
+
+    const item = this.deleteState.item;
+    const type = this.deleteState.type;
+
+    this.setLoading('delete-item', true);
 
     try {
       let deletePromise;
@@ -786,14 +1055,15 @@ export class UpdatedDataSettingsPage extends BasePage {
       if (!result?.error) {
         updateArray();
         this.showNotification('success', `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
+        this.closeDeleteModal();
       } else {
         throw new Error(result.error);
       }
     } catch (error) {
+      console.error(`Error deleting ${type}:`, error);
       this.showNotification('error', `Failed to delete ${type}`);
     } finally {
-      this.setLoading(loadingKey, false);
+      this.setLoading('delete-item', false);
     }
   }
 }
-

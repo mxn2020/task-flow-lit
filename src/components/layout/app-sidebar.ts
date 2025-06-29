@@ -4,7 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
 import { ThemeController } from '../../controllers/theme-controller';
-import { Scope } from '../../types';
+import { Scope, SystemScopeType } from '../../types';
 import { supabase } from '../../services/supabase';
 import '../common/skeleton-loader';
 
@@ -105,6 +105,7 @@ export class AppSidebar extends LitElement {
     .nav-item-icon {
       font-size: 1.1rem;
       flex-shrink: 0;
+      color: inherit;
     }
 
     .nav-item-text {
@@ -340,16 +341,46 @@ export class AppSidebar extends LitElement {
   @state() private currentTheme: string = 'light';
   @state() private currentResolvedTheme: string = 'light';
 
+  private systemScopeTypes: Array<{ type: SystemScopeType, icon: string }> = [
+    { type: 'todo', icon: 'check-circle' },
+    { type: 'note', icon: 'pencil-square' },
+    { type: 'brainstorm', icon: 'light-bulb' },
+    { type: 'checklist', icon: 'check-square' },
+    { type: 'milestone', icon: 'target' },
+    { type: 'resource', icon: 'book-open' },
+    { type: 'bookmark', icon: 'bookmark' },
+    { type: 'event', icon: 'calendar' },
+    { type: 'timeblock', icon: 'clock' },
+    { type: 'flow', icon: 'arrows-right-left' },
+  ];
+
   connectedCallback() {
     super.connectedCallback();
     this.loadScopes();
-    
+
     // Sync theme state
     this.syncThemeState();
-    
+
     // Listen for route changes to update active states
     this.routerController.addEventListener?.('route-changed', () => {
       this.requestUpdate();
+    });
+
+    // Listen for scope updates
+    this.addEventListener('scopes-updated', () => {
+      this.loadScopes();
+    });
+
+    // Listen for global scope updates
+    document.addEventListener('scopes-updated', () => {
+      this.loadScopes();
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('scopes-updated', () => {
+      this.loadScopes();
     });
   }
 
@@ -357,10 +388,20 @@ export class AppSidebar extends LitElement {
     if (changedProperties.has('currentTeamSlug') && this.currentTeamSlug) {
       this.loadScopes();
     }
-    
+
     // Sync theme state when theme controller changes
     if (changedProperties.has('themeController')) {
       this.syncThemeState();
+    }
+
+    // Listen for account changes
+    if (changedProperties.has('stateController')) {
+      const newAccountId = this.stateController?.state?.currentAccount?.id;
+      const oldAccountId = changedProperties.get('stateController')?.state?.currentAccount?.id;
+
+      if (newAccountId && newAccountId !== oldAccountId) {
+        this.loadScopes();
+      }
     }
   }
 
@@ -372,23 +413,33 @@ export class AppSidebar extends LitElement {
   }
 
   private async loadScopes() {
-    if (!this.currentAccount?.id) return;
-    
+    if (!this.currentAccount?.id) {
+      console.log('[Sidebar] No current account available');
+      this.scopesLoading = false;
+      return;
+    }
+
     this.scopesLoading = true;
     try {
+      console.log('[Sidebar] Loading scopes for account:', this.currentAccount.id);
       const { data, error } = await supabase.getScopes(this.currentAccount.id);
-      if (error) throw error;
-      
-      // Map scopes and add mock item_count if it doesn't exist
+      if (error) {
+        console.error('[Sidebar] Error loading scopes:', error);
+        throw error;
+      }
+
+      // Filter scopes that should show in sidebar
       this.scopes = (data || [])
-        .filter(s => s.show_in_sidebar)
+        .filter(s => s.show_in_sidebar !== false) // Show by default unless explicitly false
         .map(scope => ({
           ...scope,
           // Use existing item_count if it exists, otherwise default to 0
           item_count: 'item_count' in scope ? scope.item_count : 0
         }));
+
+      console.log('[Sidebar] Loaded scopes for sidebar:', this.scopes.length);
     } catch (error) {
-      console.error('Failed to load sidebar scopes:', error);
+      console.error('[Sidebar] Failed to load sidebar scopes:', error);
       this.scopes = [];
     } finally {
       this.scopesLoading = false;
@@ -398,7 +449,7 @@ export class AppSidebar extends LitElement {
   private get currentAccount() {
     return this.stateController.state.currentAccount;
   }
-  
+
   private get accounts() {
     return this.stateController.state.accounts;
   }
@@ -413,9 +464,14 @@ export class AppSidebar extends LitElement {
     }
     return currentPath.startsWith(targetPath);
   }
-  
+
   private isScopeItemRoute(path: string): boolean {
     return /^\/app\/[^\/]+\/scopes\/[^\/]+/.test(path);
+  }
+
+  private getIconForScopeType(type: SystemScopeType): string {
+    const scopeType = this.systemScopeTypes.find(st => st.type === type);
+    return scopeType?.icon || 'pencil-square';
   }
 
   private handleTeamChange(e: CustomEvent) {
@@ -459,6 +515,9 @@ export class AppSidebar extends LitElement {
   render() {
     const currentPath = this.routerController.currentRoute ?? '';
     const teamSlug = this.currentTeamSlug;
+    const userName = this.stateController.userDisplayName;
+    const userEmail = this.stateController.userEmail;
+    const userInitials = this.stateController.userInitials;
 
     if (!teamSlug) return html``; // Don't render if there's no team context
 
@@ -536,7 +595,7 @@ export class AppSidebar extends LitElement {
               @mouseenter=${() => this.routerController.prefetchRoute(`/app/${teamSlug}/scopes/${scope.id}`)}
               data-href="/app/${teamSlug}/scopes/${scope.id}"
             >
-              <span class="nav-item-icon">${scope.icon || '📝'}</span>
+              <sl-icon class="nav-item-icon" name=${this.getIconForScopeType(scope.slug as SystemScopeType)}></sl-icon>
               <span class="nav-item-text">${scope.name}</span>
               ${'item_count' in scope && (scope.item_count !== undefined) && (scope.item_count !== null) && Number(scope.item_count) > 0 ? html`
                 <sl-badge class="nav-item-badge" variant="neutral" size="small" pill>
@@ -588,14 +647,14 @@ export class AppSidebar extends LitElement {
         <sl-dropdown distance="10" placement="top-start">
           <button class="user-menu-trigger" slot="trigger">
             <sl-avatar 
-              initial=${this.user?.name?.charAt(0) || this.user?.email?.charAt(0)} 
+              initial=${userName.charAt(0) || userEmail.charAt(0)} 
               label="User avatar"
               class="user-avatar"
               size="small"
             ></sl-avatar>
             <div class="user-info">
-              <div class="user-name">${this.user?.name || 'User'}</div>
-              <div class="user-email">${this.user?.email}</div>
+              <div class="user-name">${userName || 'User'}</div>
+              <div class="user-email">${userEmail}</div>
             </div>
             <sl-icon name="three-dots-vertical"></sl-icon>
           </button>

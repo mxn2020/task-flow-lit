@@ -1,13 +1,6 @@
 // src/types/index.ts:
 
-export interface User {
-  id: string;
-  email: string;
-  name?: string;
-  picture_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { User } from "@supabase/supabase-js";
 
 export interface Account {
   id: string;

@@ -4,8 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
 import { ThemeController } from '../../controllers/theme-controller';
-import { RouteContext, Scope } from '../../types';
-import { SystemScopeType } from '../../types';
+import { RouteContext, SystemScopeType, Scope } from '../../types';
 import { supabase } from '../../services/supabase';
 import '../layout/app-sidebar';
 import '../common/skeleton-loader';
@@ -100,6 +99,7 @@ export class ScopesPage extends LitElement {
     .scope-icon {
       font-size: 1.5rem;
       margin-bottom: 0.5rem;
+      color: var(--sl-color-primary-600);
     }
 
     .scope-name {
@@ -198,6 +198,7 @@ export class ScopesPage extends LitElement {
     .empty-state-icon {
       font-size: 4rem;
       margin-bottom: 1rem;
+      color: var(--sl-color-neutral-400);
     }
 
     .empty-state-title {
@@ -231,6 +232,54 @@ export class ScopesPage extends LitElement {
       margin-top: 1rem;
     }
 
+    .type-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid var(--sl-color-neutral-200);
+      border-radius: var(--sl-border-radius-medium);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-option:hover {
+      border-color: var(--sl-color-primary-300);
+      background-color: var(--sl-color-primary-50);
+    }
+
+    .type-option.selected {
+      border-color: var(--sl-color-primary-500);
+      background-color: var(--sl-color-primary-100);
+    }
+
+    .type-option-icon {
+      font-size: 1.25rem;
+      color: var(--sl-color-primary-600);
+    }
+
+    .type-option-info {
+      flex: 1;
+    }
+
+    .type-option-name {
+      font-weight: var(--sl-font-weight-medium);
+      color: var(--sl-color-neutral-900);
+      margin-bottom: 0.25rem;
+    }
+
+    .type-option-description {
+      font-size: var(--sl-font-size-small);
+      color: var(--sl-color-neutral-600);
+    }
+
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
     /* Mobile styles */
     @media (max-width: 768px) {
       .page-layout {
@@ -252,6 +301,10 @@ export class ScopesPage extends LitElement {
       }
 
       .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .type-grid {
         grid-template-columns: 1fr;
       }
 
@@ -307,6 +360,29 @@ export class ScopesPage extends LitElement {
     :host(.sl-theme-dark) .empty-state-title {
       color: var(--sl-color-neutral-100);
     }
+
+    :host(.sl-theme-dark) .type-option {
+      border-color: var(--sl-color-neutral-700);
+      background-color: var(--sl-color-neutral-800);
+    }
+
+    :host(.sl-theme-dark) .type-option:hover {
+      border-color: var(--sl-color-primary-400);
+      background-color: var(--sl-color-primary-900);
+    }
+
+    :host(.sl-theme-dark) .type-option.selected {
+      border-color: var(--sl-color-primary-500);
+      background-color: var(--sl-color-primary-900);
+    }
+
+    :host(.sl-theme-dark) .type-option-name {
+      color: var(--sl-color-neutral-100);
+    }
+
+    :host(.sl-theme-dark) .type-option-description {
+      color: var(--sl-color-neutral-400);
+    }
   `;
 
   @property({ type: Object }) stateController!: StateController;
@@ -323,7 +399,6 @@ export class ScopesPage extends LitElement {
   // Form state
   @state() private formName = '';
   @state() private formDescription = '';
-  @state() private formIcon = '';
   @state() private formType: SystemScopeType = 'todo';
 
   private systemScopeTypes: Array<{type: SystemScopeType, label: string, icon: string, description: string}> = [
@@ -345,30 +420,55 @@ export class ScopesPage extends LitElement {
   }
 
   async updated(changedProperties: Map<string, any>) {
-    const accountId = this.stateController.state.currentAccount?.id;
     if (changedProperties.has('context') || changedProperties.has('stateController')) {
-      await this.loadScopes();
+      const newAccountId = this.stateController.state.currentAccount?.id;
+      const oldAccountId = changedProperties.get('stateController')?.state?.currentAccount?.id;
+      
+      if (newAccountId && newAccountId !== oldAccountId) {
+        await this.loadScopes();
+      }
     }
   }
 
   private async loadScopes() {
     const accountId = this.stateController.state.currentAccount?.id;
-    if (!accountId) return;
+    if (!accountId) {
+      console.log('[ScopesPage] No account ID available');
+      this.loading = false;
+      return;
+    }
 
     try {
       this.loading = true;
       this.error = '';
 
+      console.log('[ScopesPage] Loading scopes for account:', accountId);
       const { data, error } = await supabase.getScopes(accountId);
-      if (error) throw error;
+      if (error) {
+        console.error('[ScopesPage] Error loading scopes:', error);
+        throw error;
+      }
       
+      console.log('[ScopesPage] Loaded scopes:', data);
       this.scopes = data || [];
     } catch (error) {
-      console.error('Failed to load scopes:', error);
+      console.error('[ScopesPage] Failed to load scopes:', error);
       this.error = error instanceof Error ? error.message : 'Failed to load scopes';
     } finally {
       this.loading = false;
     }
+  }
+
+  private goToScope(scope: Scope) {
+    const teamSlug = this.context.params.teamSlug;
+    if (teamSlug) {
+      this.routerController.goToScopeItems(teamSlug, scope.id);
+    }
+  }
+
+  private getIconForScopeType(type: SystemScopeType): string {
+    const scopeType = this.systemScopeTypes.find(st => st.type === type);
+    return scopeType?.icon || 'pencil-square';
   }
 
   render() {
@@ -387,10 +487,14 @@ export class ScopesPage extends LitElement {
       return html`
         <div class="main-content">
           <div class="page-content">
-            <error-message 
-              .message=${this.error}
-              @retry=${this.loadScopes}
-            ></error-message>
+            <sl-alert variant="danger" open>
+              <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+              <strong>Error loading scopes</strong><br>
+              ${this.error}
+              <sl-button slot="action" variant="neutral" size="small" @click=${this.loadScopes}>
+                Retry
+              </sl-button>
+            </sl-alert>
           </div>
         </div>
       `;
@@ -430,7 +534,9 @@ export class ScopesPage extends LitElement {
   private renderEmptyState() {
     return html`
       <div class="empty-state">
-        <div class="empty-state-icon">🎯</div>
+        <div class="empty-state-icon">
+          <sl-icon name="target"></sl-icon>
+        </div>
         <h2 class="empty-state-title">No scopes yet</h2>
         <p class="empty-state-text">
           Scopes help you organize different types of work. Create your first scope to get started.
@@ -450,7 +556,7 @@ export class ScopesPage extends LitElement {
             <div class="scope-header">
               <div class="scope-info">
                 <div class="scope-icon">
-                  <sl-icon name=${this.mapEmojiToHeroicon(scope.icon || '📝')}></sl-icon>
+                  <sl-icon name=${this.getIconForScopeType(scope.slug as SystemScopeType)}></sl-icon>
                 </div>
                 <h3 class="scope-name">${scope.name}</h3>
                 <p class="scope-description">${scope.description || 'No description'}</p>
@@ -467,9 +573,11 @@ export class ScopesPage extends LitElement {
             
             <div class="scope-actions" @click=${(e: Event) => e.stopPropagation()}>
               <sl-button size="small" variant="default">
+                <sl-icon slot="prefix" name="pencil"></sl-icon>
                 Edit
               </sl-button>
               <sl-button size="small" variant="danger" ?disabled=${scope.is_system}>
+                <sl-icon slot="prefix" name="trash"></sl-icon>
                 Delete
               </sl-button>
             </div>
@@ -477,7 +585,9 @@ export class ScopesPage extends LitElement {
         `)}
         
         <div class="create-scope-card" @click=${this.handleCreateScope}>
-          <div class="create-scope-icon">➕</div>
+          <div class="create-scope-icon">
+            <sl-icon name="plus-circle"></sl-icon>
+          </div>
           <div class="create-scope-text">Create New Scope</div>
           <div class="create-scope-description">Add a custom scope type</div>
         </div>
@@ -492,7 +602,7 @@ export class ScopesPage extends LitElement {
           label="Scope Name"
           placeholder="Enter scope name"
           .value=${this.formName}
-          @sl-input=${(e: CustomEvent) => this.formName = (e.target as HTMLInputElement)?.value}
+          @sl-input=${(e: CustomEvent) => this.formName = (e.target as HTMLInputElement)?.value || ''}
           required
         ></sl-input>
 
@@ -500,31 +610,30 @@ export class ScopesPage extends LitElement {
           label="Description"
           placeholder="Describe what this scope is for (optional)"
           .value=${this.formDescription}
-          @sl-input=${(e: CustomEvent) => this.formDescription = (e.target as HTMLTextAreaElement)?.value}
+          @sl-input=${(e: CustomEvent) => this.formDescription = (e.target as HTMLTextAreaElement)?.value || ''}
           rows="2"
         ></sl-textarea>
 
-        <div class="form-grid">
-          <sl-select
-            label="Scope Type"
-            .value=${this.formType}
-            @sl-change=${(e: CustomEvent) => this.formType = (e.target as HTMLSelectElement)?.value as SystemScopeType}
-            required
-          >
+        <div>
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: var(--sl-font-weight-medium);">
+            Scope Type
+          </label>
+          <div class="type-grid">
             ${this.systemScopeTypes.map(type => html`
-              <sl-option value=${type.type}>
-                ${type.icon} ${type.label} - ${type.description}
-              </sl-option>
+              <div 
+                class="type-option ${this.formType === type.type ? 'selected' : ''}"
+                @click=${() => this.formType = type.type}
+              >
+                <div class="type-option-icon">
+                  <sl-icon name=${type.icon}></sl-icon>
+                </div>
+                <div class="type-option-info">
+                  <div class="type-option-name">${type.label}</div>
+                  <div class="type-option-description">${type.description}</div>
+                </div>
+              </div>
             `)}
-          </sl-select>
-
-          <sl-input
-            label="Icon (Emoji)"
-            placeholder="📝"
-            .value=${this.formIcon}
-            @sl-input=${(e: CustomEvent) => this.formIcon = (e.target as HTMLInputElement)?.value}
-            maxlength="2"
-          ></sl-input>
+          </div>
         </div>
 
         <div class="form-actions">
@@ -557,51 +666,56 @@ export class ScopesPage extends LitElement {
   private resetForm() {
     this.formName = '';
     this.formDescription = '';
-    this.formIcon = '';
     this.formType = 'todo';
   }
 
   private async submitCreate() {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || !this.formName.trim()) return;
+    
     this.isSubmitting = true;
+    this.error = '';
 
     try {
       const accountId = this.stateController.state.currentAccount?.id;
       if (!accountId) throw new Error('Account not found');
 
-      const { error } = await supabase.createScope(accountId, {
+      console.log('[ScopesPage] Creating scope:', {
+        accountId,
         name: this.formName.trim(),
-        description: this.formDescription?.trim() || '',
-        icon: this.formIcon.trim(),
-        type: this.formType,
+        description: this.formDescription?.trim(),
+        type: this.formType
       });
 
-      if (error) throw error;
+      const { error } = await supabase.createScope({
+        account_id: accountId,
+        name: this.formName.trim(),
+        description: this.formDescription?.trim() || '',
+        slug: this.formType,
+        is_system: false,
+        show_in_sidebar: true
+      });
 
+      if (error) {
+        console.error('[ScopesPage] Create scope error:', error);
+        throw error;
+      }
+
+      console.log('[ScopesPage] Scope created successfully');
       this.showCreateDialog = false;
       this.resetForm();
       await this.loadScopes();
+      
+      // Trigger sidebar refresh
+      this.dispatchEvent(new CustomEvent('scopes-updated', {
+        bubbles: true,
+        composed: true
+      }));
+      
     } catch (error) {
-      console.error('Failed to create scope:', error);
+      console.error('[ScopesPage] Failed to create scope:', error);
       this.error = error instanceof Error ? error.message : 'Failed to create scope';
     } finally {
       this.isSubmitting = false;
-    }
-  }
-
-  private mapEmojiToHeroicon(emoji: string): string {
-    switch (emoji) {
-      case '📝': return 'pencil-square';
-      case '🎯': return 'target';
-      case '✅': return 'check-circle';
-      case '☑️': return 'check-square';
-      case '📚': return 'book-open';
-      case '🔖': return 'bookmark';
-      case '📅': return 'calendar';
-      case '⏰': return 'clock';
-      case '🔄': return 'arrows-right-left';
-      case '💡': return 'light-bulb';
-      default: return 'pencil-square';
     }
   }
 }

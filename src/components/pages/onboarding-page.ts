@@ -1,9 +1,9 @@
-// src/components/pages/onboarding-page.ts
+// Enhanced onboarding-page.ts with profile collection step
+
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { StateController } from '../../controllers/state-controller';
 import { RouterController } from '../../controllers/router-controller';
-import { supabase } from '../../services/supabase';
 
 interface OnboardingStep {
   id: number;
@@ -19,6 +19,32 @@ interface PlanOption {
   description: string;
   features: string[];
   popular?: boolean;
+}
+
+export interface UserProfileData {
+  fullName: string;
+  company?: string;
+  role?: string;
+  usageType: 'personal' | 'business' | 'education' | 'other';
+  teamSize?: string;
+  industry?: string;
+  timezone?: string;
+  phoneNumber?: string;
+}
+
+export interface UserPreferences {
+  language: string;
+  dateFormat: string;
+  timeFormat: '12h' | '24h';
+  weekStart: 'sunday' | 'monday';
+  timezone?: string;
+  notifications: {
+    email: boolean;
+    desktop: boolean;
+    mobile: boolean;
+  };
+  theme: 'system' | 'light' | 'dark';
+  emailFrequency: 'immediate' | 'daily' | 'weekly' | 'never';
 }
 
 @customElement('onboarding-page')
@@ -40,7 +66,7 @@ export class OnboardingPage extends LitElement {
 
     .onboarding-card {
       width: 100%;
-      max-width: 600px;
+      max-width: 650px;
       border: none;
       box-shadow: var(--sl-shadow-x-large);
     }
@@ -103,10 +129,33 @@ export class OnboardingPage extends LitElement {
 
     .step-content {
       margin: 2rem 0;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 0.5rem;
     }
 
     .form-section {
       margin-bottom: 1.5rem;
+    }
+
+    .form-section-title {
+      font-size: 1.1rem;
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-neutral-900);
+      margin: 0 0 1rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-grid.single {
+      grid-template-columns: 1fr;
     }
 
     .form-actions {
@@ -116,165 +165,114 @@ export class OnboardingPage extends LitElement {
       margin-top: 2rem;
     }
 
-    .plan-grid {
+    .usage-type-grid {
       display: grid;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
     }
 
-    .plan-card {
-      position: relative;
+    .usage-type-card {
       border: 2px solid var(--sl-color-neutral-200);
-      border-radius: var(--sl-border-radius-large);
-      padding: 2rem;
+      border-radius: var(--sl-border-radius-medium);
+      padding: 1rem;
+      text-align: center;
       cursor: pointer;
       transition: all 0.3s ease;
       background: white;
     }
 
-    .plan-card:hover {
+    .usage-type-card:hover {
       border-color: var(--sl-color-primary-300);
       transform: translateY(-2px);
-      box-shadow: var(--sl-shadow-medium);
     }
 
-    .plan-card.selected {
+    .usage-type-card.selected {
       border-color: var(--sl-color-primary-600);
       background-color: var(--sl-color-primary-50);
-      box-shadow: var(--sl-shadow-large);
     }
 
-    .plan-card.popular {
-      border-color: var(--sl-color-warning-400);
+    .usage-type-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
     }
 
-    .plan-badge {
-      position: absolute;
-      top: -0.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    .plan-header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .plan-name {
-      font-size: 1.25rem;
+    .usage-type-title {
       font-weight: var(--sl-font-weight-semibold);
       color: var(--sl-color-neutral-900);
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.25rem 0;
     }
 
-    .plan-price {
-      font-size: 2rem;
-      font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-primary-600);
-      margin: 0 0 0.5rem 0;
-    }
-
-    .plan-price-suffix {
-      font-size: 1rem;
-      font-weight: var(--sl-font-weight-normal);
+    .usage-type-description {
+      font-size: var(--sl-font-size-small);
       color: var(--sl-color-neutral-600);
-    }
-
-    .plan-description {
-      color: var(--sl-color-neutral-600);
-      margin: 0 0 1.5rem 0;
-    }
-
-    .plan-features {
-      list-style: none;
-      padding: 0;
       margin: 0;
-      text-align: left;
     }
 
-    .plan-features li {
+    .preferences-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .preference-group {
+      background: var(--sl-color-neutral-50);
+      border-radius: var(--sl-border-radius-medium);
+      padding: 1.5rem;
+    }
+
+    .preference-group-title {
+      font-size: 1rem;
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-neutral-900);
+      margin: 0 0 1rem 0;
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      color: var(--sl-color-neutral-700);
-      margin-bottom: 0.5rem;
-      font-size: var(--sl-font-size-small);
     }
 
-    .plan-check {
-      color: var(--sl-color-success-600);
-      font-weight: var(--sl-font-weight-bold);
-    }
-
-    .success-content {
-      text-align: center;
-      padding: 2rem 0;
-    }
-
-    .success-animation {
-      margin-bottom: 2rem;
-    }
-
-    .success-icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      display: block;
-      animation: bounce 0.6s ease-in-out;
-    }
-
-    @keyframes bounce {
-      0%, 20%, 60%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-20px); }
-      80% { transform: translateY(-10px); }
-    }
-
-    .success-title {
-      font-size: 2rem;
-      font-weight: var(--sl-font-weight-bold);
-      color: var(--sl-color-success-700);
-      margin: 0 0 1rem 0;
-    }
-
-    .success-text {
-      color: var(--sl-color-neutral-600);
-      line-height: 1.6;
-      margin: 0 0 2rem 0;
-      max-width: 400px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .success-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      max-width: 300px;
-      margin: 0 auto;
-    }
-
-    .welcome-features {
+    .notification-grid {
       display: grid;
-      gap: 1rem;
-      margin: 2rem 0;
-      text-align: left;
+      gap: 0.75rem;
     }
 
-    .feature-item {
+    .notification-item {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      background: var(--sl-color-neutral-50);
+      justify-content: space-between;
+      padding: 0.5rem 0;
+    }
+
+    .notification-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .email-preview {
+      background: var(--sl-color-neutral-100);
+      border: 1px solid var(--sl-color-neutral-200);
       border-radius: var(--sl-border-radius-medium);
+      padding: 1rem;
+      margin-top: 1rem;
     }
 
-    .feature-icon {
-      font-size: 1.5rem;
-    }
-
-    .feature-text {
+    .email-readonly {
+      font-weight: var(--sl-font-weight-medium);
       color: var(--sl-color-neutral-700);
+    }
+
+    .skip-link {
+      color: var(--sl-color-neutral-500);
+      text-decoration: none;
       font-size: var(--sl-font-size-small);
+      text-align: center;
+      margin-top: 1rem;
+      display: block;
+    }
+
+    .skip-link:hover {
+      color: var(--sl-color-neutral-700);
+      text-decoration: underline;
     }
 
     /* Mobile responsive */
@@ -287,16 +285,16 @@ export class OnboardingPage extends LitElement {
         max-width: 100%;
       }
 
-      .step-title {
-        font-size: 1.5rem;
+      .form-grid {
+        grid-template-columns: 1fr;
       }
 
       .form-actions {
         flex-direction: column;
       }
 
-      .plan-grid {
-        grid-template-columns: 1fr;
+      .usage-type-grid {
+        grid-template-columns: 1fr 1fr;
       }
     }
 
@@ -313,34 +311,31 @@ export class OnboardingPage extends LitElement {
       color: var(--sl-color-neutral-400);
     }
 
-    :host(.sl-theme-dark) .plan-card {
+    :host(.sl-theme-dark) .form-section-title,
+    :host(.sl-theme-dark) .preference-group-title {
+      color: var(--sl-color-neutral-100);
+    }
+
+    :host(.sl-theme-dark) .usage-type-card {
       background: var(--sl-color-neutral-800);
       border-color: var(--sl-color-neutral-600);
     }
 
-    :host(.sl-theme-dark) .plan-card.selected {
+    :host(.sl-theme-dark) .usage-type-card.selected {
       background-color: var(--sl-color-primary-900);
-      border-color: var(--sl-color-primary-600);
     }
 
-    :host(.sl-theme-dark) .plan-name {
+    :host(.sl-theme-dark) .usage-type-title {
       color: var(--sl-color-neutral-100);
     }
 
-    :host(.sl-theme-dark) .plan-description {
-      color: var(--sl-color-neutral-400);
-    }
-
-    :host(.sl-theme-dark) .plan-features li {
-      color: var(--sl-color-neutral-300);
-    }
-
-    :host(.sl-theme-dark) .feature-item {
+    :host(.sl-theme-dark) .preference-group {
       background: var(--sl-color-neutral-800);
     }
 
-    :host(.sl-theme-dark) .feature-text {
-      color: var(--sl-color-neutral-300);
+    :host(.sl-theme-dark) .email-preview {
+      background: var(--sl-color-neutral-800);
+      border-color: var(--sl-color-neutral-600);
     }
   `;
 
@@ -348,48 +343,57 @@ export class OnboardingPage extends LitElement {
   @property({ type: Object }) routerController!: RouterController;
 
   @state() private currentStep = 1;
-  @state() private totalSteps = 3;
-  @state() private teamName = '';
-  @state() private selectedPlan = 'free';
+  @state() private totalSteps = 4;
   @state() private isSubmitting = false;
   @state() private error = '';
 
+  // Profile data
+  @state() private profileData: UserProfileData = {
+    fullName: '',
+    usageType: 'business'
+  };
+
+  // User preferences
+  @state() private preferences: UserPreferences = {
+    language: 'en',
+    dateFormat: 'MM/DD/YYYY',
+    timeFormat: '12h',
+    weekStart: 'sunday',
+    notifications: {
+      email: true,
+      desktop: true,
+      mobile: false
+    },
+    theme: 'system',
+    emailFrequency: 'daily'
+  };
+
+  // Other state
+  @state() private teamName = '';
+  @state() private selectedPlan = 'free';
+
   private steps: OnboardingStep[] = [
-    { id: 1, title: 'Create Your Team', subtitle: 'Give your team a name to get started', icon: '🏢' },
-    { id: 2, title: 'Choose Your Plan', subtitle: 'Select the plan that fits your needs', icon: '🚀' },
-    { id: 3, title: 'Welcome to Task Flow!', subtitle: 'You\'re all set to start organizing', icon: '🎉' }
+    { id: 1, title: 'Complete Your Profile', subtitle: 'Tell us a bit about yourself and your preferences', icon: '👤' },
+    { id: 2, title: 'Set Your Preferences', subtitle: 'Customize your workspace experience', icon: '⚙️' },
+    { id: 3, title: 'Create Your Team', subtitle: 'Give your team a name to get started', icon: '🏢' },
+    { id: 4, title: 'Welcome to Task Flow!', subtitle: 'You\'re all set to start organizing', icon: '🎉' }
   ];
 
-  private planOptions: PlanOption[] = [
-    {
-      id: 'free',
-      name: 'Free Plan',
-      price: 0,
-      description: 'Perfect for getting started',
-      features: [
-        '2 active projects',
-        '3 team members',
-        '10 documents',
-        'Basic task management',
-        'Email support'
-      ]
-    },
-    {
-      id: 'creator',
-      name: 'Creator Plan',
-      price: 9,
-      description: 'For growing teams and projects',
-      features: [
-        '10 active projects',
-        '10 team members',
-        'Unlimited documents',
-        'Advanced task management',
-        'Analytics & reporting',
-        'Priority support'
-      ],
-      popular: true
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadUserData();
+  }
+
+  private loadUserData() {
+    const user = this.stateController.state.user;
+    if (user) {
+      // Pre-populate from auth user data
+      this.profileData = {
+        ...this.profileData,
+        fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || ''
+      };
     }
-  ];
+  }
 
   render() {
     const currentStepData = this.steps[this.currentStep - 1];
@@ -434,17 +438,22 @@ export class OnboardingPage extends LitElement {
   private renderStepContent() {
     switch (this.currentStep) {
       case 1:
-        return this.renderTeamStep();
+        return this.renderProfileStep();
       case 2:
-        return this.renderPlanStep();
+        return this.renderPreferencesStep();
       case 3:
+        return this.renderTeamStep();
+      case 4:
         return this.renderSuccessStep();
       default:
         return html``;
     }
   }
 
-  private renderTeamStep() {
+  private renderProfileStep() {
+    const user = this.stateController.state.user;
+    const userEmail = user?.email || '';
+
     return html`
       ${this.error ? html`
         <sl-alert variant="danger" open closable @sl-hide=${() => this.error = ''}>
@@ -453,33 +462,150 @@ export class OnboardingPage extends LitElement {
         </sl-alert>
       ` : ''}
 
-      <form @submit=${this.handleTeamSubmit}>
+      <form @submit=${this.handleProfileSubmit}>
         <div class="form-section">
-          <sl-input
-            label="Team Name"
-            placeholder="e.g., My Awesome Team"
-            .value=${this.teamName}
-            @sl-input=${(e: CustomEvent) => this.teamName = (e.target as any).value}
-            required
-            help-text="You can always change this later in team settings"
-            size="large"
-          >
-            <sl-icon slot="prefix" name="building"></sl-icon>
-          </sl-input>
+          <h3 class="form-section-title">
+            <sl-icon name="person"></sl-icon>
+            Basic Information
+          </h3>
+          
+          <div class="email-preview">
+            <sl-input
+              label="Email Address"
+              value=${userEmail}
+              readonly
+              help-text="This email is linked to your account"
+            >
+              <sl-icon slot="prefix" name="envelope"></sl-icon>
+            </sl-input>
+          </div>
+
+          <div class="form-grid">
+            <sl-input
+              label="Full Name"
+              placeholder="Enter your full name"
+              .value=${this.profileData.fullName}
+              @sl-input=${(e: CustomEvent) => this.profileData = {...this.profileData, fullName: (e.target as any).value}}
+              required
+            >
+              <sl-icon slot="prefix" name="person"></sl-icon>
+            </sl-input>
+
+            <sl-input
+              label="Phone Number (Optional)"
+              placeholder="+1 (555) 000-0000"
+              .value=${this.profileData.phoneNumber || ''}
+              @sl-input=${(e: CustomEvent) => this.profileData = {...this.profileData, phoneNumber: (e.target as any).value}}
+            >
+              <sl-icon slot="prefix" name="telephone"></sl-icon>
+            </sl-input>
+          </div>
         </div>
 
-        <div class="welcome-features">
-          <div class="feature-item">
-            <div class="feature-icon">🎯</div>
-            <div class="feature-text">Create and manage flexible scopes for any project</div>
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <sl-icon name="briefcase"></sl-icon>
+            Professional Information (Optional)
+          </h3>
+          
+          <div class="form-grid">
+            <sl-input
+              label="Company/Organization"
+              placeholder="Acme Inc."
+              .value=${this.profileData.company || ''}
+              @sl-input=${(e: CustomEvent) => this.profileData = {...this.profileData, company: (e.target as any).value}}
+            >
+              <sl-icon slot="prefix" name="building"></sl-icon>
+            </sl-input>
+
+            <sl-input
+              label="Role/Title"
+              placeholder="Product Manager"
+              .value=${this.profileData.role || ''}
+              @sl-input=${(e: CustomEvent) => this.profileData = {...this.profileData, role: (e.target as any).value}}
+            >
+              <sl-icon slot="prefix" name="award"></sl-icon>
+            </sl-input>
           </div>
-          <div class="feature-item">
-            <div class="feature-icon">👥</div>
-            <div class="feature-text">Collaborate with team members in real-time</div>
+
+          <div class="form-grid">
+            <sl-select
+              label="Industry"
+              placeholder="Select your industry"
+              .value=${this.profileData.industry || ''}
+              @sl-change=${(e: CustomEvent) => this.profileData = {...this.profileData, industry: (e.target as any).value}}
+            >
+              <sl-option value="technology">Technology</sl-option>
+              <sl-option value="healthcare">Healthcare</sl-option>
+              <sl-option value="finance">Finance</sl-option>
+              <sl-option value="education">Education</sl-option>
+              <sl-option value="retail">Retail</sl-option>
+              <sl-option value="manufacturing">Manufacturing</sl-option>
+              <sl-option value="consulting">Consulting</sl-option>
+              <sl-option value="nonprofit">Non-profit</sl-option>
+              <sl-option value="government">Government</sl-option>
+              <sl-option value="other">Other</sl-option>
+            </sl-select>
+
+            <sl-select
+              label="Team Size"
+              placeholder="Select your team size"
+              .value=${this.profileData.teamSize || ''}
+              @sl-change=${(e: CustomEvent) => this.profileData = {...this.profileData, teamSize: (e.target as any).value}}
+            >
+              <sl-option value="just-me">Just me</sl-option>
+              <sl-option value="2-5">2-5 people</sl-option>
+              <sl-option value="6-10">6-10 people</sl-option>
+              <sl-option value="11-25">11-25 people</sl-option>
+              <sl-option value="26-50">26-50 people</sl-option>
+              <sl-option value="51-100">51-100 people</sl-option>
+              <sl-option value="100+">100+ people</sl-option>
+            </sl-select>
           </div>
-          <div class="feature-item">
-            <div class="feature-icon">📊</div>
-            <div class="feature-text">Track progress with built-in analytics</div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <sl-icon name="flag"></sl-icon>
+            How will you use Task Flow?
+          </h3>
+          
+          <div class="usage-type-grid">
+            <div 
+              class="usage-type-card ${this.profileData.usageType === 'personal' ? 'selected' : ''}"
+              @click=${() => this.profileData = {...this.profileData, usageType: 'personal'}}
+            >
+              <div class="usage-type-icon">👤</div>
+              <div class="usage-type-title">Personal</div>
+              <div class="usage-type-description">Personal projects & tasks</div>
+            </div>
+            
+            <div 
+              class="usage-type-card ${this.profileData.usageType === 'business' ? 'selected' : ''}"
+              @click=${() => this.profileData = {...this.profileData, usageType: 'business'}}
+            >
+              <div class="usage-type-icon">💼</div>
+              <div class="usage-type-title">Business</div>
+              <div class="usage-type-description">Team & work projects</div>
+            </div>
+            
+            <div 
+              class="usage-type-card ${this.profileData.usageType === 'education' ? 'selected' : ''}"
+              @click=${() => this.profileData = {...this.profileData, usageType: 'education'}}
+            >
+              <div class="usage-type-icon">🎓</div>
+              <div class="usage-type-title">Education</div>
+              <div class="usage-type-description">Academic projects</div>
+            </div>
+            
+            <div 
+              class="usage-type-card ${this.profileData.usageType === 'other' ? 'selected' : ''}"
+              @click=${() => this.profileData = {...this.profileData, usageType: 'other'}}
+            >
+              <div class="usage-type-icon">🔧</div>
+              <div class="usage-type-title">Other</div>
+              <div class="usage-type-description">Something else</div>
+            </div>
           </div>
         </div>
 
@@ -493,56 +619,178 @@ export class OnboardingPage extends LitElement {
             variant="primary"
             size="large"
             ?loading=${this.isSubmitting}
-            ?disabled=${!this.teamName.trim()}
+            ?disabled=${!this.profileData.fullName.trim()}
           >
             <sl-icon slot="suffix" name="arrow-right"></sl-icon>
             Continue
           </sl-button>
         </div>
+
+        <a href="#" class="skip-link" @click=${this.handleSkipStep}>
+          Skip this step for now
+        </a>
       </form>
     `;
   }
 
-  private renderPlanStep() {
+  private renderPreferencesStep() {
     return html`
-      <div class="plan-grid">
-        ${this.planOptions.map(plan => html`
-          <div 
-            class="plan-card ${this.selectedPlan === plan.id ? 'selected' : ''} ${plan.popular ? 'popular' : ''}"
-            @click=${() => this.selectedPlan = plan.id}
-          >
-            ${plan.popular ? html`
-              <sl-badge variant="warning" class="plan-badge">
-                <sl-icon slot="prefix" name="star-fill"></sl-icon>
-                Most Popular
-              </sl-badge>
-            ` : ''}
+      <div class="preferences-grid">
+        <div class="preference-group">
+          <h3 class="preference-group-title">
+            <sl-icon name="globe"></sl-icon>
+            Regional Settings
+          </h3>
+          
+          <div class="form-grid">
+            <sl-select
+              label="Language"
+              .value=${this.preferences.language}
+              @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, language: (e.target as any).value}}
+            >
+              <sl-option value="en">English</sl-option>
+              <sl-option value="es">Español</sl-option>
+              <sl-option value="fr">Français</sl-option>
+              <sl-option value="de">Deutsch</sl-option>
+              <sl-option value="pt">Português</sl-option>
+            </sl-select>
 
-            <div class="plan-header">
-              <h3 class="plan-name">${plan.name}</h3>
-              <div class="plan-price">
-                $${plan.price}
-                <span class="plan-price-suffix">/month</span>
+            <sl-select
+              label="Timezone"
+              .value=${this.preferences.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
+              @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, timezone: (e.target as any).value}}
+            >
+              <sl-option value="America/New_York">Eastern Time (ET)</sl-option>
+              <sl-option value="America/Chicago">Central Time (CT)</sl-option>
+              <sl-option value="America/Denver">Mountain Time (MT)</sl-option>
+              <sl-option value="America/Los_Angeles">Pacific Time (PT)</sl-option>
+              <sl-option value="Europe/London">London (GMT)</sl-option>
+              <sl-option value="Europe/Paris">Paris (CET)</sl-option>
+              <sl-option value="Asia/Tokyo">Tokyo (JST)</sl-option>
+              <sl-option value="Australia/Sydney">Sydney (AEST)</sl-option>
+            </sl-select>
+          </div>
+
+          <div class="form-grid">
+            <sl-select
+              label="Date Format"
+              .value=${this.preferences.dateFormat}
+              @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, dateFormat: (e.target as any).value}}
+            >
+              <sl-option value="MM/DD/YYYY">MM/DD/YYYY (US)</sl-option>
+              <sl-option value="DD/MM/YYYY">DD/MM/YYYY (EU)</sl-option>
+              <sl-option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</sl-option>
+            </sl-select>
+
+            <sl-select
+              label="Time Format"
+              .value=${this.preferences.timeFormat}
+              @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, timeFormat: (e.target as any).value}}
+            >
+              <sl-option value="12h">12 hour (AM/PM)</sl-option>
+              <sl-option value="24h">24 hour</sl-option>
+            </sl-select>
+          </div>
+        </div>
+
+        <div class="preference-group">
+          <h3 class="preference-group-title">
+            <sl-icon name="bell"></sl-icon>
+            Notification Preferences
+          </h3>
+          
+          <div class="notification-grid">
+            <div class="notification-item">
+              <div class="notification-label">
+                <sl-icon name="envelope"></sl-icon>
+                Email notifications
               </div>
-              <p class="plan-description">${plan.description}</p>
+              <sl-switch
+                .checked=${this.preferences.notifications.email}
+                @sl-change=${(e: CustomEvent) => this.preferences = {
+                  ...this.preferences,
+                  notifications: {
+                    ...this.preferences.notifications,
+                    email: (e.target as any).checked
+                  }
+                }}
+              ></sl-switch>
             </div>
 
-            <ul class="plan-features">
-              ${plan.features.map(feature => html`
-                <li>
-                  <sl-icon name="check" class="plan-check"></sl-icon>
-                  ${feature}
-                </li>
-              `)}
-            </ul>
-          </div>
-        `)}
-      </div>
+            <div class="notification-item">
+              <div class="notification-label">
+                <sl-icon name="display"></sl-icon>
+                Desktop notifications
+              </div>
+              <sl-switch
+                .checked=${this.preferences.notifications.desktop}
+                @sl-change=${(e: CustomEvent) => this.preferences = {
+                  ...this.preferences,
+                  notifications: {
+                    ...this.preferences.notifications,
+                    desktop: (e.target as any).checked
+                  }
+                }}
+              ></sl-switch>
+            </div>
 
-      <sl-alert variant="primary" open>
-        <sl-icon slot="icon" name="info-circle"></sl-icon>
-        <strong>No commitment required.</strong> Start with any plan and change or cancel anytime.
-      </sl-alert>
+            <div class="notification-item">
+              <div class="notification-label">
+                <sl-icon name="phone"></sl-icon>
+                Mobile notifications
+              </div>
+              <sl-switch
+                .checked=${this.preferences.notifications.mobile}
+                @sl-change=${(e: CustomEvent) => this.preferences = {
+                  ...this.preferences,
+                  notifications: {
+                    ...this.preferences.notifications,
+                    mobile: (e.target as any).checked
+                  }
+                }}
+              ></sl-switch>
+            </div>
+          </div>
+
+          <sl-select
+            label="Email Frequency"
+            .value=${this.preferences.emailFrequency}
+            @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, emailFrequency: (e.target as any).value}}
+            style="margin-top: 1rem;"
+          >
+            <sl-option value="immediate">Immediate</sl-option>
+            <sl-option value="daily">Daily digest</sl-option>
+            <sl-option value="weekly">Weekly summary</sl-option>
+            <sl-option value="never">Never</sl-option>
+          </sl-select>
+        </div>
+
+        <div class="preference-group">
+          <h3 class="preference-group-title">
+            <sl-icon name="palette"></sl-icon>
+            Appearance
+          </h3>
+          
+          <sl-select
+            label="Theme"
+            .value=${this.preferences.theme}
+            @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, theme: (e.target as any).value}}
+          >
+            <sl-option value="system">System (auto)</sl-option>
+            <sl-option value="light">Light</sl-option>
+            <sl-option value="dark">Dark</sl-option>
+          </sl-select>
+
+          <sl-select
+            label="Week starts on"
+            .value=${this.preferences.weekStart}
+            @sl-change=${(e: CustomEvent) => this.preferences = {...this.preferences, weekStart: (e.target as any).value}}
+          >
+            <sl-option value="sunday">Sunday</sl-option>
+            <sl-option value="monday">Monday</sl-option>
+          </sl-select>
+        </div>
+      </div>
 
       <div class="form-actions">
         <sl-button variant="default" @click=${() => this.currentStep = 1}>
@@ -552,11 +800,50 @@ export class OnboardingPage extends LitElement {
         <sl-button
           variant="primary"
           size="large"
-          @click=${this.handlePlanSubmit}
+          @click=${this.handlePreferencesSubmit}
           ?loading=${this.isSubmitting}
         >
+          <sl-icon slot="suffix" name="arrow-right"></sl-icon>
+          Continue
+        </sl-button>
+      </div>
+
+      <a href="#" class="skip-link" @click=${this.handleSkipStep}>
+        Skip and use defaults
+      </a>
+    `;
+  }
+
+  private renderTeamStep() {
+    return html`
+      <div class="form-section">
+        <sl-input
+          label="Team Name"
+          placeholder="e.g., My Awesome Team"
+          .value=${this.teamName}
+          @sl-input=${(e: CustomEvent) => this.teamName = (e.target as any).value}
+          required
+          help-text="You can always change this later in team settings"
+          size="large"
+        >
+          <sl-icon slot="prefix" name="building"></sl-icon>
+        </sl-input>
+      </div>
+
+      <div class="form-actions">
+        <sl-button variant="default" @click=${() => this.currentStep = 2}>
+          <sl-icon slot="prefix" name="arrow-left"></sl-icon>
+          Back
+        </sl-button>
+        <sl-button
+          variant="primary"
+          size="large"
+          @click=${this.handleTeamSubmit}
+          ?loading=${this.isSubmitting}
+          ?disabled=${!this.teamName.trim()}
+        >
           <sl-icon slot="suffix" name="rocket"></sl-icon>
-          ${this.selectedPlan === 'free' ? 'Start Free' : 'Continue with Creator Plan'}
+          Complete Setup
         </sl-button>
       </div>
     `;
@@ -569,7 +856,7 @@ export class OnboardingPage extends LitElement {
           <div class="success-icon">🎉</div>
           <h2 class="success-title">Welcome to Task Flow!</h2>
           <p class="success-text">
-            Your team "<strong>${this.teamName}</strong>" has been created successfully. 
+            Your profile and team "<strong>${this.teamName}</strong>" have been set up successfully. 
             You're all set to start organizing your work and collaborating with your team.
           </p>
         </div>
@@ -601,21 +888,73 @@ export class OnboardingPage extends LitElement {
     `;
   }
 
-  private async handleTeamSubmit(event: Event) {
+  private async handleProfileSubmit(event: Event) {
     event.preventDefault();
     
+    if (this.isSubmitting || !this.profileData.fullName.trim()) return;
+    
+    this.isSubmitting = true;
+    this.error = '';
+
+    try {
+      // Update the personal account with profile information
+      const result = await this.stateController.updatePersonalAccountInfo(this.profileData);
+      
+      if (result.error) {
+        this.error = result.error;
+      } else {
+        this.currentStep = 2;
+      }
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to save profile';
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  private async handlePreferencesSubmit() {
+    if (this.isSubmitting) return;
+    
+    this.isSubmitting = true;
+    this.error = '';
+
+    try {
+      // Update the personal account with user preferences
+      const result = await this.stateController.updatePersonalAccountSettings(this.preferences);
+      
+      if (result.error) {
+        this.error = result.error;
+      } else {
+        this.currentStep = 3;
+      }
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to save preferences';
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  private async handleTeamSubmit() {
     if (this.isSubmitting || !this.teamName.trim()) return;
     
     this.isSubmitting = true;
     this.error = '';
 
     try {
+      // Create team account
       const { data, error } = await this.stateController.createTeamAccount(this.teamName.trim());
       
       if (error) {
         this.error = error;
       } else if (data) {
-        this.currentStep = 2;
+        // Mark onboarding as completed
+        await this.stateController.completeOnboarding({
+          team_created: true,
+          team_name: this.teamName.trim(),
+          onboarding_flow_version: '1.0'
+        });
+        
+        this.currentStep = 4;
       }
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Failed to create team';
@@ -624,25 +963,16 @@ export class OnboardingPage extends LitElement {
     }
   }
 
-  private async handlePlanSubmit() {
-    if (this.isSubmitting) return;
+  private async handleSkipStep(event: Event) {
+    event.preventDefault();
     
-    this.isSubmitting = true;
-    this.error = '';
-
-    try {
-      // For now, just complete onboarding since we're auto-selecting free plan
-      // In a real app, you'd handle payment flow for paid plans here
-      
-      if (this.stateController.state.currentAccount?.id) {
-        await supabase.completeOnboarding(this.stateController.state.currentAccount.id);
-      }
-      
+    if (this.currentStep === 1) {
+      // Skip profile step, just move to preferences with basic data
+      this.profileData.fullName = this.profileData.fullName || 'User';
+      this.currentStep = 2;
+    } else if (this.currentStep === 2) {
+      // Skip preferences step, use defaults
       this.currentStep = 3;
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to setup plan';
-    } finally {
-      this.isSubmitting = false;
     }
   }
 
@@ -658,5 +988,6 @@ export class OnboardingPage extends LitElement {
     // Navigate to a features tour or documentation
     window.open('/docs/getting-started', '_blank');
   }
+  
 }
 

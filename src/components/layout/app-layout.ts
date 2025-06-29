@@ -302,19 +302,28 @@ export class AppLayout extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    
+
     // Listen for route changes to handle transitions
     const originalUpdateRoute = this.routerController.updateRoute;
     this.routerController.updateRoute = (...args) => {
       this.handleRouteTransition();
       return originalUpdateRoute.apply(this.routerController, args);
     };
+
+    // Listen for scope updates to refresh sidebar
+    this.addEventListener('scopes-updated', () => {
+      // Force sidebar to refresh scopes
+      const sidebar = this.shadowRoot?.querySelector('app-sidebar');
+      if (sidebar) {
+        (sidebar as any).loadScopes?.();
+      }
+    });
   }
 
   private handleRouteTransition() {
     this.isTransitioning = true;
     this.requestUpdate();
-    
+
     // Reset transition state after a short delay
     setTimeout(() => {
       this.isTransitioning = false;
@@ -396,31 +405,31 @@ export class AppLayout extends LitElement {
     switch (component) {
       case 'landing-page':
         return html`<landing-page ...${baseProps}></landing-page>`;
-      
+
       case 'sign-in-page':
         return html`<sign-in-page .stateController=${this.stateController}></sign-in-page>`;
-      
+
       case 'sign-up-page':
         return html`<sign-up-page .stateController=${this.stateController}></sign-up-page>`;
-      
+
       case 'forgot-password-page':
         return html`<forgot-password-page .stateController=${this.stateController}></forgot-password-page>`;
-      
+
       case 'reset-password-page':
         return html`<reset-password-page .stateController=${this.stateController}></reset-password-page>`;
-      
+
       case 'confirm-page':
         return html`<confirm-page 
           .stateController=${this.stateController}
           .routerController=${this.routerController}
         ></confirm-page>`;
-      
+
       case 'email-confirmation-page':
         return html`<email-confirmation-page 
           .stateController=${this.stateController}
           .email=${context.query.get('email')}
         ></email-confirmation-page>`;
-      
+
       case 'onboarding-page':
         return html`<onboarding-page 
           .stateController=${this.stateController}
@@ -429,7 +438,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></onboarding-page>`;
-      
+
       case 'dashboard-page':
         return html`<dashboard-page 
           .stateController=${this.stateController}
@@ -438,7 +447,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></dashboard-page>`;
-      
+
       case 'team-dashboard-page':
         return html`<team-dashboard-page 
           .stateController=${this.stateController}
@@ -447,7 +456,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></team-dashboard-page>`;
-      
+
       case 'scopes-page':
         return html`<scopes-page 
           .stateController=${this.stateController}
@@ -456,7 +465,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></scopes-page>`;
-      
+
       case 'scope-items-page':
         return html`<scope-items-page 
           .stateController=${this.stateController}
@@ -465,7 +474,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></scope-items-page>`;
-      
+
       case 'data-settings-page':
         return html`<data-settings-page 
           .stateController=${this.stateController}
@@ -474,7 +483,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></data-settings-page>`;
-      
+
       case 'profile-page':
         return html`<profile-page 
           .stateController=${this.stateController}
@@ -483,7 +492,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></profile-page>`;
-      
+
       case 'team-page':
         return html`<team-page 
           .stateController=${this.stateController}
@@ -492,7 +501,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></team-page>`;
-      
+
       case 'team-members-page':
         return html`<team-members-page 
           .stateController=${this.stateController}
@@ -501,7 +510,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></team-members-page>`;
-      
+
       case 'billing-page':
         return html`<billing-page 
           .stateController=${this.stateController}
@@ -510,7 +519,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></billing-page>`;
-      
+
       case 'documentation-page':
         return html`<documentation-page 
           .stateController=${this.stateController}
@@ -519,7 +528,7 @@ export class AppLayout extends LitElement {
           .loadingController=${this.loadingController}
           .context=${context}
         ></documentation-page>`;
-      
+
       case 'not-found-page':
       default:
         return html`<not-found-page .routerController=${this.routerController}></not-found-page>`;

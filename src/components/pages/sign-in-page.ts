@@ -326,13 +326,14 @@ export class SignInPage extends LitElement {
   @state() private error = '';
   @state() private debugLogs: string[] = [];
   @state() private showDebug = false;
+  @state() private isResendingEmail = false;
 
   connectedCallback() {
     super.connectedCallback();
     this.addDebugLog('🔌 SignInPage connected');
     this.addDebugLog(`📍 Current URL: ${window.location.href}`);
     this.addDebugLog(`🔐 StateController provided: ${!!this.stateController}`);
-    
+
     // Load saved email if remember me was used
     const savedEmail = localStorage.getItem('taskflow-remember-email');
     if (savedEmail) {
@@ -349,121 +350,114 @@ export class SignInPage extends LitElement {
     this.requestUpdate();
   }
 
-  render() {
-    return html`
-      <div class="container">
-        <sl-card class="sign-in-card">
-          ${this.isSubmitting ? html`
-            <div class="loading-overlay">
-              <sl-spinner style="font-size: 2rem;"></sl-spinner>
-            </div>
-          ` : ''}
+render() {
+  return html`
+    <div class="container">
+      <sl-card class="sign-in-card">
+        ${this.isSubmitting ? html`
+          <div class="loading-overlay">
+            <sl-spinner style="font-size: 2rem;"></sl-spinner>
+          </div>
+        ` : ''}
 
-          <div class="card-header">
-            <div class="logo">
-              <sl-icon name="layers" class="logo-icon"></sl-icon>
-              <div class="logo-text">Task Flow</div>
-            </div>
-
-            <sl-badge variant="primary" pill class="welcome-badge">
-              <sl-icon slot="prefix" name="star"></sl-icon>
-              Welcome Back
-            </sl-badge>
-
-            <h1 class="form-title">Sign in to your account</h1>
-            <p class="form-subtitle">Enter your credentials to access your workspace</p>
+        <div class="card-header">
+          <div class="logo">
+            <sl-icon name="layers" class="logo-icon"></sl-icon>
+            <div class="logo-text">Task Flow</div>
           </div>
 
-          <div class="form-content">
-            ${this.error ? html`
-              <div class="form-section">
-                <sl-alert variant="danger" open>
-                  <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
-                  <strong>Sign In Failed</strong><br>
-                  ${this.error}
-                </sl-alert>
-              </div>
-            ` : ''}
+          <sl-badge variant="primary" pill class="welcome-badge">
+            <sl-icon slot="prefix" name="star"></sl-icon>
+            Welcome Back
+          </sl-badge>
 
-            ${this.renderDemoSection()}
+          <h1 class="form-title">Sign in to your account</h1>
+          <p class="form-subtitle">Enter your credentials to access your workspace</p>
+        </div>
 
-            <form @submit=${this.handleSubmit}>
-              <div class="form-section">
-                <sl-input
-                  label="Email Address"
-                  type="email"
-                  placeholder="Enter your email"
-                  .value=${this.email}
-                  @sl-input=${(e: CustomEvent) => this.email = (e.target as any).value}
-                  required
-                  autocomplete="email"
-                >
-                  <sl-icon slot="prefix" name="envelope"></sl-icon>
-                </sl-input>
-              </div>
+        <div class="form-content">
+          ${this.renderErrorAlert()}
 
-              <div class="form-section">
-                <sl-input
-                  label="Password"
-                  type="password"
-                  placeholder="Enter your password"
-                  .value=${this.password}
-                  @sl-input=${(e: CustomEvent) => this.password = (e.target as any).value}
-                  required
-                  autocomplete="current-password"
-                  password-toggle
-                >
-                  <sl-icon slot="prefix" name="lock"></sl-icon>
-                </sl-input>
-              </div>
+          ${this.renderDemoSection()}
 
-              <div class="form-options">
-                <label class="remember-me">
-                  <sl-checkbox
-                    .checked=${this.rememberMe}
-                    @sl-change=${(e: CustomEvent) => this.rememberMe = (e.target as any).checked}
-                  ></sl-checkbox>
-                  Remember me
-                </label>
-                <a href="/auth/forgot-password" class="forgot-link">
-                  Forgot password?
-                </a>
-              </div>
-
-              <div class="form-actions">
-                <sl-button
-                  type="submit"
-                  variant="primary"
-                  size="large"
-                  ?loading=${this.isSubmitting}
-                  ?disabled=${!this.email || !this.password}
-                >
-                  <sl-icon slot="prefix" name="box-arrow-in-right"></sl-icon>
-                  ${this.isSubmitting ? 'Signing in...' : 'Sign In'}
-                </sl-button>
-              </div>
-            </form>
-
-            <div class="divider">
-              <span>New to Task Flow?</span>
+          <form @submit=${this.handleSubmit}>
+            <!-- Rest of your form content remains the same -->
+            <div class="form-section">
+              <sl-input
+                label="Email Address"
+                type="email"
+                placeholder="Enter your email"
+                .value=${this.email}
+                @sl-input=${(e: CustomEvent) => this.email = (e.target as any).value}
+                required
+                autocomplete="email"
+              >
+                <sl-icon slot="prefix" name="envelope"></sl-icon>
+              </sl-input>
             </div>
 
-            <div class="footer-links">
-              <p>
-                Don't have an account? 
-                <a href="/auth/sign-up">Create one here</a>
-              </p>
-              <p>
-                <a href="/">← Back to Homepage</a>
-              </p>
+            <div class="form-section">
+              <sl-input
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                .value=${this.password}
+                @sl-input=${(e: CustomEvent) => this.password = (e.target as any).value}
+                required
+                autocomplete="current-password"
+                password-toggle
+              >
+                <sl-icon slot="prefix" name="lock"></sl-icon>
+              </sl-input>
             </div>
 
-            ${this.renderDebugSection()}
+            <div class="form-options">
+              <label class="remember-me">
+                <sl-checkbox
+                  .checked=${this.rememberMe}
+                  @sl-change=${(e: CustomEvent) => this.rememberMe = (e.target as any).checked}
+                ></sl-checkbox>
+                Remember me
+              </label>
+              <a href="/auth/forgot-password" class="forgot-link">
+                Forgot password?
+              </a>
+            </div>
+
+            <div class="form-actions">
+              <sl-button
+                type="submit"
+                variant="primary"
+                size="large"
+                ?loading=${this.isSubmitting}
+                ?disabled=${!this.email || !this.password}
+              >
+                <sl-icon slot="prefix" name="box-arrow-in-right"></sl-icon>
+                ${this.isSubmitting ? 'Signing in...' : 'Sign In'}
+              </sl-button>
+            </div>
+          </form>
+
+          <div class="divider">
+            <span>New to Task Flow?</span>
           </div>
-        </sl-card>
-      </div>
-    `;
-  }
+
+          <div class="footer-links">
+            <p>
+              Don't have an account? 
+              <a href="/auth/sign-up">Create one here</a>
+            </p>
+            <p>
+              <a href="/">← Back to Homepage</a>
+            </p>
+          </div>
+
+          ${this.renderDebugSection()}
+        </div>
+      </sl-card>
+    </div>
+  `;
+}
 
   private renderDemoSection() {
     return html`
@@ -521,12 +515,12 @@ export class SignInPage extends LitElement {
 
   private async handleSubmit(event: Event) {
     event.preventDefault();
-    
+
     if (this.isSubmitting) {
       this.addDebugLog('⚠️ Submit called while already submitting, ignoring');
       return;
     }
-    
+
     this.addDebugLog(`📝 Form submitted with email: ${this.email}, remember: ${this.rememberMe}`);
     this.isSubmitting = true;
     this.error = '';
@@ -543,11 +537,13 @@ export class SignInPage extends LitElement {
     try {
       this.addDebugLog('🔄 Calling stateController.signIn...');
       const { error } = await this.stateController.signIn(this.email, this.password);
-      
+
       if (error) {
         this.addDebugLog(`❌ Sign in error: ${error}`);
-        this.error = error;
-        
+
+        // Handle specific error types with user-friendly messages
+        this.error = this.getFormattedError(error);
+
         // Clear password on error for security
         this.password = '';
       } else {
@@ -559,12 +555,135 @@ export class SignInPage extends LitElement {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
       this.addDebugLog(`💥 Sign in exception: ${errorMessage}`);
-      this.error = errorMessage;
+      this.error = this.getFormattedError(errorMessage);
       this.password = '';
     } finally {
       this.isSubmitting = false;
       this.addDebugLog(`🏁 Form submission complete, isSubmitting: ${this.isSubmitting}`);
     }
+  }
+
+  private getFormattedError(error: string): string {
+    const errorLower = error.toLowerCase();
+
+    if (errorLower.includes('email not confirmed')) {
+      return 'Please check your email and click the confirmation link before signing in. If you haven\'t received the email, you can request a new one.';
+    }
+
+    if (errorLower.includes('invalid login credentials') || errorLower.includes('invalid email or password')) {
+      return 'Invalid email or password. Please check your credentials and try again.';
+    }
+
+    if (errorLower.includes('too many requests')) {
+      return 'Too many sign-in attempts. Please wait a few minutes before trying again.';
+    }
+
+    if (errorLower.includes('email rate limit exceeded')) {
+      return 'Email rate limit exceeded. Please wait before requesting another confirmation email.';
+    }
+
+    if (errorLower.includes('user not found')) {
+      return 'No account found with this email address. Please check your email or create a new account.';
+    }
+
+    if (errorLower.includes('network') || errorLower.includes('fetch')) {
+      return 'Connection error. Please check your internet connection and try again.';
+    }
+
+    // Return the original error if we don't have a specific handler
+    return error;
+  }
+
+  private renderErrorAlert() {
+    if (!this.error) return '';
+
+    const isEmailNotConfirmed = this.error.toLowerCase().includes('confirmation link');
+
+    return html`
+    <div class="form-section">
+      <sl-alert variant="danger" open>
+        <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+        <strong>Sign In Failed</strong><br>
+        ${this.error}
+        
+        ${isEmailNotConfirmed ? html`
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <sl-button
+              size="small"
+              variant="default"
+              @click=${this.resendConfirmationEmail}
+              ?loading=${this.isResendingEmail}
+            >
+              <sl-icon slot="prefix" name="envelope"></sl-icon>
+              Resend Email
+            </sl-button>
+            <sl-button
+              size="small"
+              variant="text"
+              @click=${this.openEmailHelp}
+            >
+              <sl-icon slot="prefix" name="question-circle"></sl-icon>
+              Help
+            </sl-button>
+          </div>
+        ` : ''}
+      </sl-alert>
+    </div>
+  `;
+  }
+
+  private async resendConfirmationEmail() {
+    if (!this.email || this.isResendingEmail) return;
+
+    this.isResendingEmail = true;
+    this.addDebugLog(`📧 Resending confirmation email to: ${this.email}`);
+
+    try {
+      // Call your state controller method to resend confirmation
+      const { error } = await this.stateController.resendConfirmation(this.email);
+
+      if (error) {
+        this.addDebugLog(`❌ Resend confirmation error: ${error}`);
+        // Show a toast or update error message
+        this.showToast('Failed to resend confirmation email. Please try again.', 'danger');
+      } else {
+        this.addDebugLog('✅ Confirmation email resent successfully');
+        this.showToast('Confirmation email sent! Please check your inbox.', 'success');
+        // Clear the error since we've taken action
+        this.error = '';
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to resend email';
+      this.addDebugLog(`💥 Resend confirmation exception: ${errorMessage}`);
+      this.showToast('Failed to resend confirmation email. Please try again.', 'danger');
+    } finally {
+      this.isResendingEmail = false;
+    }
+  }
+
+  private openEmailHelp() {
+    // You could show a dialog with help information
+    this.showToast('Check your spam folder, or contact support if you continue having issues.', 'primary');
+  }
+
+  private showToast(message: string, variant: 'primary' | 'success' | 'warning' | 'danger' = 'primary') {
+    // Create and show a toast notification
+    const toast = document.createElement('sl-alert');
+    toast.variant = variant;
+    toast.closable = true;
+    toast.duration = 5000;
+    toast.innerHTML = `
+    <sl-icon slot="icon" name="${variant === 'success' ? 'check-circle' : variant === 'danger' ? 'exclamation-triangle' : 'info-circle'}"></sl-icon>
+    ${message}
+  `;
+
+    document.body.appendChild(toast);
+    toast.toast();
+
+    // Remove from DOM after it's hidden
+    toast.addEventListener('sl-hide', () => {
+      document.body.removeChild(toast);
+    });
   }
 }
 

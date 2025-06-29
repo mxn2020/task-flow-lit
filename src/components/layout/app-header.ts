@@ -406,7 +406,7 @@ export class AppHeader extends LitElement {
       breadcrumbs.push({
         label: 'Dashboard',
         href: `/app/${this.currentTeamSlug}`,
-        icon: 'home'
+        icon: 'house-door'
       });
 
       // Add team-specific breadcrumbs
@@ -431,16 +431,16 @@ export class AppHeader extends LitElement {
         breadcrumbs.push({
           label: 'Team',
           href: `/app/${this.currentTeamSlug}/team`,
-          icon: 'users'
+          icon: 'people'
         });
         breadcrumbs.push({
           label: 'Members',
-          icon: 'user-plus'
+          icon: 'person-plus'
         });
       } else if (path.includes('/team')) {
         breadcrumbs.push({
           label: 'Team Settings',
-          icon: 'cog-6-tooth'
+          icon: 'gear'
         });
       } else if (path.includes('/billing')) {
         breadcrumbs.push({
@@ -450,7 +450,7 @@ export class AppHeader extends LitElement {
       } else if (path.includes('/profile')) {
         breadcrumbs.push({
           label: 'Profile',
-          icon: 'user-circle'
+          icon: 'person-circle'
         });
       } else if (path.includes('/data-settings')) {
         breadcrumbs.push({
@@ -461,12 +461,12 @@ export class AppHeader extends LitElement {
     } else if (path === '/app') {
       breadcrumbs.push({
         label: 'Personal Dashboard',
-        icon: 'home'
+        icon: 'house-door'
       });
     } else if (path === '/onboarding') {
       breadcrumbs.push({
         label: 'Getting Started',
-        icon: 'rocket'
+        icon: 'rocket-takeoff'
       });
     }
 
@@ -483,7 +483,7 @@ export class AppHeader extends LitElement {
   private handleSearch(event: Event) {
     const input = event.target as HTMLInputElement;
     this.searchQuery = input.value;
-    
+
     if (this.searchQuery.length > 2) {
       this.performSearch();
     } else {
@@ -494,7 +494,7 @@ export class AppHeader extends LitElement {
   private async performSearch() {
     // Simulate search - replace with actual search implementation
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     this.searchResults = [
       {
         title: 'Project Alpha Tasks',
@@ -511,10 +511,10 @@ export class AppHeader extends LitElement {
         type: 'page',
         href: `/app/${this.currentTeamSlug}/profile`
       }
-    ].filter(item => 
+    ].filter(item =>
       item.title.toLowerCase().includes(this.searchQuery.toLowerCase())
     );
-    
+
     this.showSearchResults = this.searchResults.length > 0;
   }
 
@@ -564,20 +564,21 @@ export class AppHeader extends LitElement {
   }
 
   render() {
+    const userName = this.stateController.userDisplayName;
+    const userInitials = this.stateController.userInitials;
+
     return html`
       <div class="header-container">
         ${this.showSidebarToggle ? html`
           <button class="sidebar-toggle" @click=${this.handleSidebarToggle} aria-label="Open menu">
-            <sl-icon name="bars-3"></sl-icon>
+            <sl-icon name="list"></sl-icon>
           </button>
         ` : ''}
         <div class="header-left">
           ${this.currentAccount && this.currentTeamSlug ? html`
             <div class="team-info">
               <div class="team-avatar">
-                ${this.currentAccount.name?.charAt(0)
-                  ? this.currentAccount.name.charAt(0)
-                  : html`<sl-icon name="user-circle"></sl-icon>`}
+                ${this.currentAccount.name?.charAt(0) || 'T'}
               </div>
               <span>${this.currentAccount.name}</span>
             </div>
@@ -615,7 +616,7 @@ export class AppHeader extends LitElement {
               <sl-icon slot="prefix" name="search"></sl-icon>
             </sl-input>
             ${this.showSearchResults ? html`
-              <div class="search-results">
+<div class="search-results">
                 ${this.searchResults.map(result => html`
                   <div 
                     class="search-result"
@@ -648,7 +649,7 @@ export class AppHeader extends LitElement {
           <sl-dropdown distance="10">
             <div class="user-menu" slot="trigger">
               <sl-avatar 
-                initial=${this.user?.name?.charAt(0) || this.user?.email?.charAt(0)} 
+                initial=${userInitials} 
                 label="User avatar"
                 class="user-avatar"
               ></sl-avatar>
@@ -676,4 +677,3 @@ export class AppHeader extends LitElement {
     `;
   }
 }
-
